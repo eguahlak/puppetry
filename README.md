@@ -5,7 +5,7 @@
 * Adafruit neo strips
 
 | Strip         | Pixels  | Pin |
-| ------------- | ------- | --- |
+| ------------- | -------:| ---:|
 | Clock         |     n/a |   7 |
 | **B**ag       |      27 |   6 |
 | **M**ellem    |      27 |   5 |
