@@ -4,8 +4,9 @@
 * Arduino Uno
 * Adafruit neo strips
 
-| Lys           | Pixels  | Pin |
+| Strip         | Pixels  | Pin |
 | ------------- | ------- | --- |
+| Clock         |     n/a |   7 |
 | **B**ag       |      27 |   6 |
 | **M**ellem    |      27 |   5 |
 | **F**orlys    |      27 |   4 |
