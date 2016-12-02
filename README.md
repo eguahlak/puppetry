@@ -3,6 +3,7 @@
 * Raspberry pie med wifi dongle
 * Arduino Uno
 * Adafruit neo strips
+
 | Lys           | Pixels  | Pin |
 | ------------- | ------- | --- |
 | **B**ag       |      27 |   6 |
