@@ -21,4 +21,5 @@ Første (og forhåbentlig ikke sidste) version af protokollen er som følger:
 [BMFPSLRX][0-9a-f]{9}\n
 ```
 `Lff0000` tænder fuldt grønt lys i venstre side, `S008000` tænder halvt rødt lys i begge sider og `X0000ff`
-tænder blåt lys på hele teatret. Ideen er at protokollen skal understøtte farvesætning af de individuelle pixels.
+tænder blåt lys på hele teatret. Rækkefølgen er grøn-rød-blå af uvisse årsager.
+Ideen er at protokollen skal understøtte farvesætning af de individuelle pixels.
