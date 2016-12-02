@@ -4,13 +4,20 @@
 * Arduino Uno
 * Adafruit neo strips
 
-| Strip         | Pixels  | Pin |
-| ------------- | -------:| ---:|
-| Clock         |     n/a |   7 |
-| **B**ag       |      27 |   6 |
-| **M**ellem    |      27 |   5 |
-| **F**orlys    |      27 |   4 |
-| **P**roscenie |      23 |   3 | 
-| **S**ide      |      12 |   2 |
+| Strip                 | Pixels  | Pin |
+| --------------------- |:-------:| ---:|
+| *Clock*               |     n/a |   7 |
+| **B**aglys            |      27 |   6 |
+| **M**ellemlys         |      27 |   5 |
+| **F**orlys            |      27 |   4 |
+| **P**roscenielys      |      23 |   3 | 
+| **S**idelys (*L*,*R*) |      12 |   2 |
 
+## Protokol mellem Raspberry pie og Arduino
 
+Raspberry pie og Arduino kommunikerer serielt via USB.
+Første (og forhåbentlig ikke sidste) version af protokollen er som følger:
+```
+[BMFPSLRX][0-9a-f]{9}\n
+```
+`Lff0000` vil tænde fuldt grønt lys i venstre side, `S00ff00` vil tænde rødt lys i begge sider og
