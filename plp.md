@@ -74,8 +74,17 @@ Instantly sets the <target> with the color <color>
 ```
 0x01 <time> <target> <color> 
 ```
-Over <time> ms move color of all <target> from the previous color to the
-new <color>.
+Over `<time>` ms move color of all `<target>` from the previous color to the
+new `<color>`.
+
+### Test 0x02
+```
+0x02
+```
+BULB should return
+```
+0x4F4B2100 -- OK!\0
+```
 
 
 
