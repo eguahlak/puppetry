@@ -17,7 +17,7 @@ Example; 0xfffff00 is white.
 ### Target
 
 The target represent the pixels being target of the operation. A target
-is a 4 byte segment. The first 5 bytes represents the light arrays
+is a 4 byte segment. The first 5 bits represents the light arrays
 targeted, each light array has it's own bit, except *Sidelys* which 
 only have one bit for the left and right bit.
 
