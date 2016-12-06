@@ -5,6 +5,5 @@ packages:
 docker:
   enable: true
 extra-deps:
-- bindings-libusb-1.4.5.0
-- usb-1.3.0.4
+- serialport-0.4.7
 resolver: lts-7.11

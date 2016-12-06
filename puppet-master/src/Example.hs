@@ -5,6 +5,8 @@ import           Data.Aeson (Value(..), object, (.=))
 import           Network.Wai (Application)
 import qualified Web.Scotty as S
 
+import           Puppetry.Protocol
+
 app' :: S.ScottyM ()
 app' = do
   S.get "/" $ do
@@ -19,4 +21,9 @@ app = S.scottyApp app'
 runApp :: IO ()
 runApp = do
   putStrLn "Hello, world! 3"
+
+  runPuppetry "fp" defaultPuppetrySettings $ do
+    set (everything { arrays = noArrays { frontlight = True }}) cRed
+    set (everything { arrays = noArrays { backlight = True }}) cBlue
+
   S.scotty 8080 app'
