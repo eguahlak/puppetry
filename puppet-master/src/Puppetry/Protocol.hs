@@ -1,16 +1,19 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE LambdaCase #-}
 module Puppetry.Protocol
   ( Color(..)
   , ArraySelect(..)
   , Target(..)
   , PuppetCommand(..)
-  , PuppetResponds(..)
+  , PuppetResponse(..)
   , runPuppetry
   , defaultPuppetrySettings
 
-  , sendCmd
+  , sendP
   , set
   , gradient
+  , check
 
   , everything
   , nothing
@@ -32,6 +35,7 @@ import           GHC.Generics    (Generic)
 import           GHC.Word ()
 
 import           Control.Monad.IO.Class
+import           Control.Monad.Free
 
 import           System.Hardware.Serialport
 
@@ -88,8 +92,9 @@ putArraySelect t =
   putBitList $ [backlight, midlight, frontlight, scenelight, sidelight] <*> [t]
 
 putBitList :: Bits a => [Bool] -> a -> a
-putBitList ls = go ls 0
+putBitList ls a' = go ls 0 a'
   where
+    lenghtA = a'
     go (x:xs) i =
       setLast . go xs (i + 1)
       where
@@ -129,16 +134,18 @@ instance Binary Target where
     putWord32be . putArraySelect as $ shift (putBitList px zeroBits) 5
 
 
-data PuppetResponds
+data PuppetResponse
   = AllOk
+  | Error String
 
-instance Binary PuppetResponds where
+instance Binary PuppetResponse where
   get = do
     w <- getWord8
     case w of
-      0x00 -> return AllOk
+      0x00 ->
+        return AllOk
       otherwise ->
-        error $ "Could not parse '" ++ show w ++ "'"
+        return . Error $ "Could not parse '" ++ show w ++ "'"
   put res =
     case res of
       AllOk ->
@@ -147,7 +154,11 @@ instance Binary PuppetResponds where
 data PuppetCommand
   = Set Target Color
   | Gradient Word32 Target Color
+  | Check
   deriving (Show, Read)
+
+(&:) :: Binary b => Put -> b -> Put
+p &: m = p >> put m
 
 instance Binary PuppetCommand where
   get = do
@@ -155,66 +166,80 @@ instance Binary PuppetCommand where
     case w of
       0x00 -> Set <$> get <*> get
       0x01 -> Gradient <$> get <*> get <*> get
+      0x02 -> return Check
       _ -> error "Undefined Command"
   put cmd =
     case cmd of
-      Set t c -> do
-        putWord8 0x00
-        put t
-        put c
-      Gradient ms t c -> do
-        putWord8 0x01
-        put ms
-        put t
-        put c
+      Set t c ->
+        putWord8 0x00 &: t &: c
+      Gradient ms t c ->
+        putWord8 0x01 &: ms &: t &: c
+      Check ->
+        putWord8 0x02
 
-
-newtype PuppetM a = PuppetM { doSerial :: SerialPort -> IO a }
-
-runPuppetry :: FilePath -> SerialPortSettings -> PuppetM a -> IO a
-runPuppetry fp sps m =
-  withSerial fp sps (doSerial m)
-
-instance Functor PuppetM where
-  fmap f x = PuppetM $ \sp ->
-    f <$> doSerial x sp
-
-instance Applicative PuppetM where
-  pure = PuppetM . const . return
-  f <*> a = PuppetM $ \sp ->
-    doSerial f sp <*> doSerial a sp
-
-instance MonadIO PuppetM where
-  liftIO m = PuppetM (const m)
-
-instance Monad PuppetM where
-  a >>= b = PuppetM $ \sp -> do
-    x <- doSerial a sp
-    doSerial (b x) sp
-  return = pure
-
-set :: Target -> Color -> PuppetM PuppetResponds
-set t c = sendCmd $ Set t c
-
-gradient :: Word32 -> Target -> Color -> PuppetM PuppetResponds
-gradient ms t c = sendCmd $ Gradient ms t c
-
-{- TODO: Unsafe IO, we always expect input. -}
-recvResponse :: SerialPort -> IO PuppetResponds
-recvResponse sp = do
-  bs <- recv sp 1
-  case decodeOrFail $ BL.fromStrict bs of
-    Left (bs, bo, s) ->
-      error "Something technical happend"
-    Right (bs, bo, e) ->
-      return e
-
-{- TODO: Unsafe IO, we always expect that we send the entire message. -}
-sendCmd :: PuppetCommand -> PuppetM PuppetResponds
-sendCmd c = PuppetM $ \sp -> do
-  send sp . BL.toStrict $ encode c
-  recvResponse sp
-
+{- for now we just use the default settings, which is
+  * 9600 baud
+  * 8 data bits
+  * 1 stop bit
+  * no parity
+  * no flow control
+  * 0.1 second receive timeout
+-}
 defaultPuppetrySettings :: SerialPortSettings
 defaultPuppetrySettings =
   defaultSerialSettings
+
+{- A PuppetProgram is sending a PuppetCommand, and depending on the
+response will know what command to send next. -}
+data PuppetProgram next
+  = SendP PuppetCommand (PuppetResponse -> next)
+  deriving (Functor)
+
+{- Implements the puppet program using a free monad. A free monad is
+a cool construct that separates the construction of the monad from
+the interpretation.
+-}
+type PuppetM = Free PuppetProgram
+
+{- The interpreter, sends all commands to  -}
+runPuppetry :: FilePath -> SerialPortSettings -> PuppetM a -> IO a
+runPuppetry fp sps m =
+  withSerial fp sps (doSerial m)
+  where
+    doSerial (Free (SendP cmd next)) sp = do
+       -- TODO: Not completly safe, might not send the entire string
+       send sp . BL.toStrict $ encode cmd
+       rpl <- recvResponse sp
+       case rpl of
+         Error str ->
+           -- If the cmd is Check, don't fail.
+           case cmd of
+             Check ->
+               doSerial (next rpl) sp
+             otherwise ->
+               error str
+         otherwise -> doSerial (next rpl) sp
+    doSerial (Pure a) sp =
+      return a
+
+    {- TODO: Unsafe IO, we always expect input. -}
+    recvResponse :: SerialPort -> IO PuppetResponse
+    recvResponse sp = do
+      bs <- recv sp 1
+      case decodeOrFail $ BL.fromStrict bs of
+        Left (bs, bo, s) ->
+          error "Something technical happend"
+        Right (bs, bo, e) ->
+          return e
+
+sendP :: PuppetCommand -> PuppetM ()
+sendP = liftF . flip SendP (const ())
+
+set :: Target -> Color -> PuppetM ()
+set t c = sendP $ Set t c
+
+gradient :: Word32 -> Target -> Color -> PuppetM ()
+gradient ms t c = sendP $ Gradient ms t c
+
+check :: PuppetM Bool
+check = liftF $ SendP Check (\case AllOk -> True; otherwise -> False)
