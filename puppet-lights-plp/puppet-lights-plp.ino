@@ -16,10 +16,15 @@
 #define DATAPIN_P  3
 #define DATAPIN_S  2
 
-#define NOP 0
-#define SET 1
-#define GRADE 2
-#define TEST 255
+#define NOP    0
+#define SET   'S'
+#define GRADE 'G'
+#define TEST  'T'
+#define OK    '!'
+#define KO    '?'
+
+#define BINARY      'B'
+#define HEXADECIMAL 'H'
 
 Adafruit_DotStar strip_B = Adafruit_DotStar(NUMPIXELS_B, DATAPIN_B, CLOCKPIN, DOTSTAR_BRG);
 Adafruit_DotStar strip_M = Adafruit_DotStar(NUMPIXELS_M, DATAPIN_M, CLOCKPIN, DOTSTAR_BRG);
@@ -48,7 +53,10 @@ int colorLeft = 0;
 uint32_t mask = 0;
 uint32_t color = 0;
 
+bool isHex = false;
+
 void setMaskedPixelsColor(uint32_t mask, uint32_t color, Adafruit_DotStar strip, int rightPixel) {
+  if (isHex) Serial.println("setting masked pixel colors");
   int leftPixel = 0;
   while (leftPixel < rightPixel) {
     if (mask & 0x1) strip.setPixelColor(leftPixel++, color);
@@ -56,9 +64,11 @@ void setMaskedPixelsColor(uint32_t mask, uint32_t color, Adafruit_DotStar strip,
     if (mask & 0x1) strip.setPixelColor(--rightPixel, color);
     mask = mask >> 1;
     }
+  strip.show();
   }
 
 void parseCommand(uint32_t mask, uint32_t color) {
+  if (isHex) Serial.println("parsing command");
   uint32_t pixelMask = mask >> 5;
   if (mask & 0x01) setMaskedPixelsColor(pixelMask, color, strip_B, NUMPIXELS_B);
   if (mask & 0x02) setMaskedPixelsColor(pixelMask, color, strip_M, NUMPIXELS_M);
@@ -67,6 +77,11 @@ void parseCommand(uint32_t mask, uint32_t color) {
   if (mask & 0x10) setMaskedPixelsColor(pixelMask, color, strip_S, NUMPIXELS_S);
   }
 
+int hexValueOf(int c) {
+  if ('0' <= c && c <= '9')  return c - '0';
+  if ('a' <= c && c <= 'f')  return 10 + c - 'a';
+  return 0;
+  }
 
 void loop() {
   if (maskLeft == 0 && colorLeft == 0) {
@@ -75,9 +90,26 @@ void loop() {
         break;
       case SET:
         parseCommand(mask, color);
+        Serial.write(OK);
+        Serial.flush();
         break;
       case TEST:
-        Serial.write(7);
+        Serial.write(OK);
+        Serial.flush();
+        break;
+      case BINARY:
+        Serial.write(OK);
+        Serial.flush();
+        isHex = false;
+        break;
+      case HEXADECIMAL:
+        isHex = true;
+        Serial.write(OK);
+        Serial.flush();
+        break;
+      default:
+        Serial.write(KO);
+        Serial.flush();
         break;
       }    
     mask = 0;
@@ -95,8 +127,8 @@ void loop() {
           colorLeft = 0;
           break;
         case SET:
-          maskLeft = 4;
-          colorLeft = 4;
+          maskLeft = isHex ? 8 : 4;
+          colorLeft = isHex ? 8 : 4;
           break;
         case TEST:
           maskLeft = 0;
@@ -106,11 +138,13 @@ void loop() {
       }
     else if (maskLeft > 0) {
       maskLeft--;
-      mask = (mask << 8) | c;
+      if (isHex) mask = (mask << 4) | hexValueOf(c);
+      else mask = (mask << 8) | c;
       }
     else if (colorLeft > 0) {
       colorLeft--;
-      color = color << 8 | c;
+      if (isHex) color = (color << 4) | hexValueOf(c);
+      else color = color << 8 | c;
       }
     if (maskLeft == 0 && colorLeft == 0) break;
     }
