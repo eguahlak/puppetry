@@ -9,6 +9,7 @@ module Puppetry.Protocol
   , PuppetResponse(..)
   , runPuppetry
   , defaultPuppetrySettings
+  , printProgram
 
   , sendP
   , set
@@ -231,6 +232,12 @@ runPuppetry fp sps m =
           error "Something technical happend"
         Right (bs, bo, e) ->
           return e
+
+printProgram :: PuppetM a -> IO a
+printProgram (Pure a) = return a
+printProgram (Free (SendP cmd next)) = do
+  print cmd
+  printProgram (next AllOk)
 
 sendP :: PuppetCommand -> PuppetM ()
 sendP = liftF . flip SendP (const ())

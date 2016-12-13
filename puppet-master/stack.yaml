@@ -7,3 +7,8 @@ docker:
 extra-deps:
 - serialport-0.4.7
 resolver: lts-7.11
+
+image:
+  container:
+    name: haskell-docker-example
+    base: fpco/stack-run
