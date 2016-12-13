@@ -46,6 +46,7 @@ A light only on the left side of the scene, but on all arrays, except
 the *Scenelys* can be targeted using this bit array.
 ```
 -- arrays ---  ------------------  pixels  -------------------
+0  1  2  3  4  5  6  ....                   
 1  1  1  0  1  1  0  1  0  1  0  1  0  1  0  1  0  1  0
 B  M  F  P  S  L0 R0 L1 R1 L2 R2 L3 R3 L4 R4 L5 R5 L6 R6 .... 
 ```
