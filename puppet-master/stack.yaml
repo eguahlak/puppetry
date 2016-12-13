@@ -3,7 +3,11 @@ extra-package-dbs: []
 packages:
 - '.'
 docker:
+  enable: false
+
+nix:
   enable: true
+
 extra-deps:
 - serialport-0.4.7
 resolver: lts-7.11
