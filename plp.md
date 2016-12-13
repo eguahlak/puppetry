@@ -65,22 +65,27 @@ a single integer:
 After this MASTER is able to send commands to BULB. A command is 
 a byte, from the command-table below. 
 
-### Set 0x00
+### Nop 0x00
 ```
-0x00 <target> <color> 
+0x00
+```
+Does nothing, send 9 nops to resync
+### Set 0x01
+```
+0x01 <target> <color> 
 ```
 Instantly sets the <target> with the color <color> 
 
-### Gradient 0x01
+### Gradient 0x02
 ```
-0x01 <time> <target> <color> 
+0x02 <time> <target> <color> 
 ```
 Over `<time>` ms move color of all `<target>` from the previous color to the
 new `<color>`.
 
-### Test 0x02
+### Test 0xff
 ```
-0x02
+0xff
 ```
 BULB should return
 ```
