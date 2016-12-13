@@ -89,7 +89,7 @@ new `<color>`.
 ```
 BULB should return
 ```
-0x4F4B2100 -- OK!\0
+0x4F4B2100 -- OK!\n
 ```
 
 
