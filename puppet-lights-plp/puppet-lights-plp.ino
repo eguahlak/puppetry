@@ -55,13 +55,16 @@ uint32_t color = 0;
 
 bool isHex = false;
 
-void setMaskedPixelsColor(uint32_t mask, uint32_t color, Adafruit_DotStar strip, int rightPixel) {
+void setMaskedPixelsColor(uint32_t mask, uint32_t color, Adafruit_DotStar strip, int count) {
   if (isHex) Serial.println("setting masked pixel colors");
   int leftPixel = 0;
+  int rightPixel = count - 1;
   while (leftPixel < rightPixel) {
-    if (mask & 0x1) strip.setPixelColor(leftPixel++, color);
+    if (mask & 0x1) strip.setPixelColor(leftPixel, color);
+    leftPixel++;
     mask = mask >> 1;
-    if (mask & 0x1) strip.setPixelColor(--rightPixel, color);
+    if (mask & 0x1) strip.setPixelColor(rightPixel, color);
+    rightPixel--;
     mask = mask >> 1;
     }
   strip.show();
@@ -98,9 +101,9 @@ void loop() {
         Serial.flush();
         break;
       case BINARY:
+        isHex = false;
         Serial.write(OK);
         Serial.flush();
-        isHex = false;
         break;
       case HEXADECIMAL:
         isHex = true;
@@ -111,7 +114,7 @@ void loop() {
         Serial.write(KO);
         Serial.flush();
         break;
-      }    
+      }
     mask = 0;
     color = 0;
     command = 0;
@@ -149,6 +152,3 @@ void loop() {
     if (maskLeft == 0 && colorLeft == 0) break;
     }
   }
-
-
-
