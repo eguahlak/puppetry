@@ -17,6 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Example
                      , Puppetry.Protocol
+                     , Puppetry.Server
   build-depends:       base >= 4.7 && < 5
                      , aeson
                      , scotty
@@ -25,6 +26,10 @@ library
                      , serialport
                      , bytestring
                      , free
+                     , wai-middleware-static
+                     , text
+                     , mtl
+                     , unix
   default-language:    Haskell2010
 
 executable puppet-master-exe

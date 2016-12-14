@@ -1,6 +1,10 @@
 module Main where
 
-import           Example (runApp)
+import  Puppetry.Protocol
+import  Puppetry.Server
+import  System.Environment
 
 main :: IO ()
-main = runApp
+main = do
+  file:[] <- getArgs
+  startPuppetServer file 8080
