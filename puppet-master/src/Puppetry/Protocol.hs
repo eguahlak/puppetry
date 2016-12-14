@@ -285,7 +285,8 @@ runPuppetry fp sps m =
 
     doSerial (Free (SendP cmd next)) sp = do
        -- TODO: Not completly safe, might not send the entire string
-       -- s <- recv sp 1
+       flush sp
+       -- s <- recv sp 10
        -- print s
        x <- send sp . traceShowId . BL.toStrict $ encode cmd
        print x
