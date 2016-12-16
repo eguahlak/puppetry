@@ -39,9 +39,10 @@ void loop() {
   // Do nothing, maybe out comment completely?
   }
 
+bool isHex = false;
 // reads a byte a byte at a time into a value.
 // returns true if the byte was read.
-boolean readInt(byte c, unit32_t & value, int & read) {
+boolean readInt(byte c, uint32_t & value, int & read) {
   if (isHex)
     if (read++ < 8) {
       value = (value << 4) | hexValueOf(c);
@@ -61,7 +62,6 @@ int colorRead = 0;
 uint32_t mask = 0;
 uint32_t color = 0;
 
-bool isHex = false;
 
 // action takes a byte and tries to perform an action. If the action
 // is still waiting for inputs it return 0, else it returns a return type
