@@ -17,10 +17,10 @@ startPuppetServer :: FilePath -> Int -> IO ()
 startPuppetServer fp port = do
   runPuppetry fp defaultPuppetrySettings $ do
     test
-    set (everything { arrays = noArrays { midlight = True }, pixels = leftSide })
-         cGreen
-    set (everything { arrays = noArrays { midlight = True }, pixels = rightSide })
+    set (everything { arrays = noArrays { scenelight = True }, pixels = leftSide })
          cRed
+    set (everything { arrays = noArrays { scenelight = True }, pixels = rightSide })
+         cGreen
     -- set (everything { arrays = noArrays { scenelight = True }}) cRed
     -- set (everything { arrays = noArrays { backlight = True }}) cBlue
     -- set (everything { arrays = noArrays { midlight = True }}) cGreen

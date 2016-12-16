@@ -154,7 +154,6 @@ getBitList a i = go 0
     go _ = []
 
 leftSide = map (\x -> mod x 2 == 0) [0..26]
-
 rightSide = map (\x -> mod x 2 == 1) [0..26]
 
 data Target = Target

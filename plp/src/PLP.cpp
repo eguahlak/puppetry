@@ -18,7 +18,6 @@ PuppetLight::PuppetLight(int index, int dataPin, int clockPin, int pixelCount) {
   count = pixelCount;
   strip = new Adafruit_DotStar(pixelCount, dataPin, clockPin, DOTSTAR_BRG);
   strip->begin();
-  strip->show();
   }
 
 PuppetLight::~PuppetLight() {
