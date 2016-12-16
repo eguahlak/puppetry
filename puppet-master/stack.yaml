@@ -6,7 +6,7 @@ docker:
   enable: false
 
 nix:
-  enable: true
+  enable: false
 
 extra-deps:
 - serialport-0.4.7
