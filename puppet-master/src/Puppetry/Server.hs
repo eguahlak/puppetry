@@ -7,18 +7,18 @@ import           Network.Wai.Middleware.Static
 import qualified Web.Scotty.Trans              as S
 
 import           Control.Monad.Trans (lift)
+import           Control.Monad.IO.Class (liftIO)
 import           Data.Text.Lazy
+import           System.Posix
 
 import           Puppetry.Protocol
 
 startPuppetServer :: FilePath -> Int -> IO ()
 startPuppetServer fp port = do
-  runPuppetry fp defaultPuppetrySettings $ do
-    test
-    set everything cRed
-
-  -- putStrLn "Starting Puppet Server"
-  -- S.scottyT port (runPuppetry fp defaultPuppetrySettings) app
+  putStrLn "Starting Puppet Server"
+  withSerial fp defaultPuppetrySettings $ \sp -> do
+    printAll sp
+    S.scottyT port (unsafeRunPuppetry sp) app
 
 app :: S.ScottyT Text PuppetM ()
 app = do

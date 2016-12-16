@@ -18,16 +18,9 @@ PuppetLight light_S = PuppetLight(4, 2, 7, 12);
 
 void setup() {
   Serial.begin(9600);
+  Serial.write(OK);
   }
 
-int waitMillis = 100;
-int command = 0;
-int maskLeft = 0;
-int colorLeft = 0;
-uint32_t mask = 0;
-uint32_t color = 0;
-
-bool isHex = false;
 
 void runSetCommand(uint32_t mask, uint32_t color) {
   light_B.doSet(mask, color);
@@ -44,68 +37,83 @@ int hexValueOf(int c) {
   }
 
 void loop() {
-  if (maskLeft == 0 && colorLeft == 0) {
-    switch (command) {
-      case NOP:
-        break;
-      case SET:
-        runSetCommand(mask, color);
-        Serial.write(OK);
-        Serial.flush();
-        break;
-      case TEST:
-        Serial.write(OK);
-        Serial.flush();
-        break;
-      case BINARY:
-        isHex = false;
-        Serial.write(OK);
-        Serial.flush();
-        break;
-      case HEXADECIMAL:
-        isHex = true;
-        Serial.write(OK);
-        Serial.flush();
-        break;
-      default:
-        Serial.write(KO);
-        Serial.flush();
-        break;
-      }
-    mask = 0;
-    color = 0;
-    command = 0;
+  // Do nothing, maybe out comment completely?
+  }
+
+#define DONE
+#define WAITING
+#define SKIPPED
+
+bool isHex = false;
+// reads a byte a byte at a time into a value.
+// returns 1 if the byte was read, and 2 if the
+void readInt(byte c, uint32_t & value, int & left) {
+  if (left > 0) {
+    if (isHex)
+      value = (value << 4) | hexValueOf(c);
+    else
+      value = (value << 8) | c;
+    left = left - 1;
     }
-  delay(waitMillis);
-  while (Serial.available()) {
-    int c = Serial.read();
-    if (command == 0) {
-      command = c;
+  }
+
+int command = NOP;
+
+int maskLeft = 0;
+int colorLeft = 0;
+uint32_t mask = 0;
+uint32_t color = 0;
+
+// action takes a byte and tries to perform an action. If the action
+// is still waiting for inputs it return 0, else it returns a return type
+// byte.
+byte action (byte b) {
+  switch (command) {
+    case NOP:
+      command = b;
       switch (command) {
-        case NOP:
-          maskLeft = 0;
-          colorLeft = 0;
-          break;
+        case TEST:
+          return OK;
+        case BINARY:
+          isHex = false;
+          return OK;
+        case HEXADECIMAL:
+          isHex = true;
+          return OK;
         case SET:
           maskLeft = isHex ? 8 : 4;
           colorLeft = isHex ? 8 : 4;
-          break;
-        case TEST:
-          maskLeft = 0;
-          colorLeft = 0;
-          break;
+          return 0;
+      }
+      return 0;
+    case SET:
+      if (maskLeft != 0) {
+        readInt(b, mask, maskLeft);
+        return 0;
+      }
+      if (colorLeft) {
+        readInt(b, color, colorLeft);
+        if (colorLeft) return 0;
+        runSetCommand(mask, color);
+        return OK;
+        } else {
+        return KO;
         }
-      }
-    else if (maskLeft > 0) {
-      maskLeft--;
-      if (isHex) mask = (mask << 4) | hexValueOf(c);
-      else mask = (mask << 8) | c;
-      }
-    else if (colorLeft > 0) {
-      colorLeft--;
-      if (isHex) color = (color << 4) | hexValueOf(c);
-      else color = color << 8 | c;
-      }
-    if (maskLeft == 0 && colorLeft == 0) break;
+    default:
+      return KO;
+    }
+}
+
+void serialEvent () {
+  // Read command.
+  while (Serial.available() > 0) {
+    byte b = Serial.read();
+    byte resp = action(b);
+    if (resp) {
+      // Indicated that an action is taken.
+      Serial.write(resp);
+      Serial.flush();
+      command = NOP;
     }
   }
+}

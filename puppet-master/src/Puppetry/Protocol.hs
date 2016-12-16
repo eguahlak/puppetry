@@ -12,8 +12,12 @@ module Puppetry.Protocol
   , PuppetResponse(..)
   , PuppetM (..)
   , runPuppetry
+  , unsafeRunPuppetry
   , defaultPuppetrySettings
   , printProgram
+  , printAll
+
+  , withSerial
 
   , sendP
   , sendCmd
@@ -21,6 +25,9 @@ module Puppetry.Protocol
   , set
   , gradient
   , test
+
+  , leftSide
+  , rightSide
 
   , everything
   , nothing
@@ -150,6 +157,10 @@ getBitList a i = go 0
     go j | j < i = testBit a j : go (j + 1)
     go _ = []
 
+leftSide = map (\x -> mod x 2 == 0) [0..26]
+
+rightSide = map (\x -> mod x 2 == 1) [0..26]
+
 data Target = Target
   { arrays :: !ArraySelect
   , pixels :: ![Bool]
@@ -274,65 +285,59 @@ type PuppetM = Free PuppetProgram
 instance MonadIO (Free PuppetProgram) where
   liftIO m = liftF (DoIO m)
 
+
+unsafeRunPuppetry :: SerialPort -> PuppetM a -> IO a
+unsafeRunPuppetry sp puppet =
+  case puppet of
+    Free (DoIO m) -> do
+      next <- m
+      unsafeRunPuppetry sp next
+
+    Free (SendP cmd next) -> do
+      send sp . traceShowId . BL.toStrict $ encode cmd
+      rpl <- recvResponse sp
+      case rpl of
+        Error str ->
+          -- If the cmd is C
+          case cmd of
+            Test ->
+              unsafeRunPuppetry sp $ next rpl
+            otherwise ->
+              error str
+        otherwise -> unsafeRunPuppetry sp $ next rpl
+
+    Pure a -> do
+      return a
+
+  where
+  recvResponse :: SerialPort -> IO PuppetResponse
+  recvResponse sp = do
+    flush sp
+    bs <- recv sp 1
+    print bs
+    if 0 == BS.length bs
+      then recvResponse sp
+      else
+        case decodeOrFail $ BL.fromStrict bs of
+          Left a ->
+            error $ "Something technical happend: " ++ show a
+          Right (bs, bo, e) ->
+            return e
+
+printAll sp = do
+  bs <- recv sp 1
+  if BS.length bs > 0 && bs /= "!" then do
+    BS.putStr bs
+    printAll sp
+  else
+    BS.putStr bs
+
 {- The interpreter, sends all commands to  -}
 runPuppetry :: FilePath -> SerialPortSettings -> PuppetM a -> IO a
 runPuppetry fp sps m =
-  withSerial fp sps (doSerial m)
-  where
-    doSerial (Free (DoIO m)) sp = do
-      next <- m
-      doSerial next sp
-
-    doSerial (Free (SendP cmd next)) sp = do
-       -- TODO: Not completly safe, might not send the entire string
-       flush sp
-       -- s <- recv sp 10
-       -- print s
-       x <- send sp . traceShowId . BL.toStrict $ encode cmd
-       print x
-       rpl <- recvResponse sp
-       case rpl of
-         Error str ->
-           -- If the cmd is C
-           case cmd of
-             Test ->
-               doSerial (next rpl) sp
-             otherwise ->
-               error str
-         otherwise -> doSerial (next rpl) sp
-
-    doSerial (Free (SendCmd bs next)) sp = do
-      b' <- recv sp 4
-      print b'
-      sendByteString sp bs
-      doSerial next sp
-
-    doSerial (Pure a) sp =
-      return a
-
-    sendByteString sp bs | BS.length bs > 0 = do
-      let (h,rest) = BS.splitAt 1 bs
-      p <- send sp h
-      b' <- recv sp 10
-      print p
-      print b'
-      sendByteString sp rest
-    sendByteString _ _ = return ()
-
-    {- TODO: Unsafe IO, we always expect input. -}
-    recvResponse :: SerialPort -> IO PuppetResponse
-    recvResponse sp = do
-      flush sp
-      bs <- recv sp 10
-      print bs
-      if 0 == BS.length bs
-        then recvResponse sp
-        else
-          case decodeOrFail $ BL.fromStrict bs of
-            Left a ->
-              error $ "Something technical happend: " ++ show a
-            Right (bs, bo, e) ->
-              return e
+  withSerial fp sps $ \sp -> do
+    printAll sp -- print everything left in the thing.
+    unsafeRunPuppetry sp m
 
 printProgram :: PuppetM a -> IO a
 printProgram (Pure a) = return a
