@@ -22,6 +22,9 @@ module Puppetry.Protocol
   , gradient
   , test
 
+  , leftSide
+  , rightSide
+
   , everything
   , nothing
   , noArrays
@@ -150,6 +153,10 @@ getBitList a i = go 0
     go j | j < i = testBit a j : go (j + 1)
     go _ = []
 
+leftSide = map (\x -> mod x 2 == 0) [0..26]
+
+rightSide = map (\x -> mod x 2 == 1) [0..26]
+
 data Target = Target
   { arrays :: !ArraySelect
   , pixels :: ![Bool]
@@ -277,29 +284,35 @@ instance MonadIO (Free PuppetProgram) where
 {- The interpreter, sends all commands to  -}
 runPuppetry :: FilePath -> SerialPortSettings -> PuppetM a -> IO a
 runPuppetry fp sps m =
-  withSerial fp sps (doSerial m)
+  withSerial fp sps $ \sp -> do
+    printAll sp -- print everything left int the thing.
+    doSerial m sp
   where
+    printAll sp = do
+      bs <- recv sp 1
+      if BS.length bs > 0 && bs /= "!" then do
+        BS.putStr bs
+        printAll sp
+      else
+        BS.putStr bs
+
     doSerial (Free (DoIO m)) sp = do
       next <- m
       doSerial next sp
 
     doSerial (Free (SendP cmd next)) sp = do
-       -- TODO: Not completly safe, might not send the entire string
-       flush sp
-       -- s <- recv sp 10
-       -- print s
-       x <- send sp . traceShowId . BL.toStrict $ encode cmd
-       print x
-       rpl <- recvResponse sp
-       case rpl of
-         Error str ->
-           -- If the cmd is C
-           case cmd of
-             Test ->
-               doSerial (next rpl) sp
-             otherwise ->
-               error str
-         otherwise -> doSerial (next rpl) sp
+      -- TODO: Not completly safe, might not send the entire string
+      send sp . traceShowId . BL.toStrict $ encode cmd
+      rpl <- recvResponse sp
+      case rpl of
+        Error str ->
+          -- If the cmd is C
+          case cmd of
+            Test ->
+              doSerial (next rpl) sp
+            otherwise ->
+              error str
+        otherwise -> doSerial (next rpl) sp
 
     doSerial (Free (SendCmd bs next)) sp = do
       b' <- recv sp 4
@@ -323,7 +336,7 @@ runPuppetry fp sps m =
     recvResponse :: SerialPort -> IO PuppetResponse
     recvResponse sp = do
       flush sp
-      bs <- recv sp 10
+      bs <- recv sp 1
       print bs
       if 0 == BS.length bs
         then recvResponse sp

@@ -18,6 +18,7 @@ PuppetLight light_S = PuppetLight(4, 2, 7, 12);
 
 void setup() {
   Serial.begin(9600);
+  Serial.write(OK);
   }
 
 
@@ -39,29 +40,29 @@ void loop() {
   // Do nothing, maybe out comment completely?
   }
 
+#define DONE
+#define WAITING
+#define SKIPPED
+
 bool isHex = false;
 // reads a byte a byte at a time into a value.
-// returns true if the byte was read.
-boolean readInt(byte c, uint32_t & value, int & read) {
-  if (isHex)
-    if (read++ < 8) {
+// returns 1 if the byte was read, and 2 if the
+void readInt(byte c, uint32_t & value, int & left) {
+  if (left > 0) {
+    if (isHex)
       value = (value << 4) | hexValueOf(c);
-      return true;
-    } else return false;
-  else
-    if (read++ < 4) {
+    else
       value = (value << 8) | c;
-      return true;
-    } else return false;
+    left = left - 1;
+    }
   }
 
 int command = NOP;
 
-int maskRead = 0;
-int colorRead = 0;
+int maskLeft = 0;
+int colorLeft = 0;
 uint32_t mask = 0;
 uint32_t color = 0;
-
 
 // action takes a byte and tries to perform an action. If the action
 // is still waiting for inputs it return 0, else it returns a return type
@@ -70,22 +71,34 @@ byte action (byte b) {
   switch (command) {
     case NOP:
       command = b;
+      switch (command) {
+        case TEST:
+          return OK;
+        case BINARY:
+          isHex = false;
+          return OK;
+        case HEXADECIMAL:
+          isHex = true;
+          return OK;
+        case SET:
+          maskLeft = isHex ? 8 : 4;
+          colorLeft = isHex ? 8 : 4;
+          return 0;
+      }
       return 0;
     case SET:
-      if (readInt(b, mask, maskRead)) return 0;
-      if (readInt(b, color, colorRead)) return 0;
-      // At this point both mask and color should be filled.
-      runSetCommand(mask, color);
-      maskRead = colorRead = 0;
-      return OK;
-    case TEST:
-      return OK;
-    case BINARY:
-      isHex = false;
-      return OK;
-    case HEXADECIMAL:
-      isHex = true;
-      return OK;
+      if (maskLeft != 0) {
+        readInt(b, mask, maskLeft);
+        return 0;
+      }
+      if (colorLeft) {
+        readInt(b, color, colorLeft);
+        if (colorLeft) return 0;
+        runSetCommand(mask, color);
+        return OK;
+        } else {
+        return KO;
+        }
     default:
       return KO;
     }
@@ -94,7 +107,8 @@ byte action (byte b) {
 void serialEvent () {
   // Read command.
   while (Serial.available() > 0) {
-    byte resp = action(Serial.read());
+    byte b = Serial.read();
+    byte resp = action(b);
     if (resp) {
       // Indicated that an action is taken.
       Serial.write(resp);
