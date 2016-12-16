@@ -6,19 +6,32 @@ import           Network.Wai                   (Application)
 import           Network.Wai.Middleware.Static
 import qualified Web.Scotty.Trans              as S
 
+
+import qualified Data.List as L
+
 import           Control.Monad.Trans (lift)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Text.Lazy
 import           System.Posix
+
+import qualified Control.Concurrent.Lock as Lock
 
 import           Puppetry.Protocol
 
 startPuppetServer :: FilePath -> Int -> IO ()
 startPuppetServer fp port = do
   putStrLn "Starting Puppet Server"
-  withSerial fp defaultPuppetrySettings $ \sp -> do
-    printAll sp
-    S.scottyT port (unsafeRunPuppetry sp) app
+  unsafe
+  where
+    unsafe :: IO ()
+    unsafe = do
+      lock <- Lock.new
+      withSerial fp defaultPuppetrySettings $ \sp -> do
+        printAll sp
+        S.scottyT port (Lock.with lock . unsafeRunPuppetry sp) app
+    safe :: IO ()
+    safe =
+      S.scottyT port (runPuppetry fp defaultPuppetrySettings) app
 
 app :: S.ScottyT Text PuppetM ()
 app = do
@@ -27,6 +40,11 @@ app = do
     S.file "../puppet-client/index.html"
     S.setHeader "Content-Type" "html"
 
+  S.put "/api" $ do
+    cmds <- S.jsonData
+    lift $ execute cmds
+
   S.put "/api/send" $ do
     cmd <- S.jsonData
     lift $ sendP cmd
+

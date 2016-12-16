@@ -30,6 +30,9 @@ library
                      , text
                      , mtl
                      , unix
+                     , monadplus
+                     , vector
+                     , concurrent-extra
   default-language:    Haskell2010
 
 executable puppet-master-exe

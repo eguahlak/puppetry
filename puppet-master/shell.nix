@@ -4,9 +4,10 @@ let
 
   inherit (nixpkgs) pkgs;
 
-  f = { mkDerivation, aeson, base, binary, bytestring, free, hspec
-      , hspec-wai, hspec-wai-json, scotty, serialport, stdenv, wai
-      , wai-middleware-static
+  f = { mkDerivation, aeson, base, binary, bytestring
+      , concurrent-extra, free, hspec, hspec-wai, hspec-wai-json
+      , monadplus, mtl, scotty, serialport, stdenv, text, unix, vector
+      , wai, wai-middleware-static
       }:
       mkDerivation {
         pname = "puppet-master";
@@ -15,8 +16,8 @@ let
         isLibrary = true;
         isExecutable = true;
         libraryHaskellDepends = [
-          aeson base binary bytestring free scotty serialport wai
-          wai-middleware-static
+          aeson base binary bytestring concurrent-extra free monadplus mtl
+          scotty serialport text unix vector wai wai-middleware-static
         ];
         executableHaskellDepends = [ base ];
         testHaskellDepends = [ aeson base hspec hspec-wai hspec-wai-json ];

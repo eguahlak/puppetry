@@ -16,6 +16,7 @@ module Puppetry.Protocol
   , defaultPuppetrySettings
   , printProgram
   , printAll
+  , execute
 
   , withSerial
 
@@ -50,10 +51,11 @@ import qualified Data.ByteString            as BS
 import qualified Data.ByteString.Lazy       as BL
 
 import           Data.Aeson                 (FromJSON (..), Object, Value (..),
-                                             (.:))
+                                             (.:), (.:?))
 
 import           Data.String
 import qualified Data.Text                  as T
+import qualified Data.Vector                as V
 import           Numeric
 
 import           GHC.Generics               (Generic)
@@ -61,7 +63,9 @@ import           GHC.Word                   ()
 
 import           Control.Monad
 import           Control.Monad.Free
+import           Control.Monad.Plus
 import           Control.Monad.IO.Class
+import           Control.Concurrent
 
 import           System.Hardware.Serialport
 
@@ -95,6 +99,17 @@ data ArraySelect = ArraySelect
   , sidelight  :: !Bool
   } deriving (Show, Read, Generic)
 
+instance Monoid ArraySelect where
+  mempty = noArrays
+  mappend m1 m2 =
+    ArraySelect
+     { backlight = backlight m1 || backlight m2
+     , midlight = midlight m1 || midlight m2
+     , frontlight = frontlight m1 || frontlight m2
+     , scenelight = scenelight m1 || scenelight m2
+     , sidelight = sidelight m1 || sidelight m2
+     }
+
 instance FromJSON ArraySelect where
   parseJSON (String "all") =
     return allArrays
@@ -108,6 +123,9 @@ instance FromJSON ArraySelect where
     return $ noArrays { sidelight = True }
   parseJSON (String "scene") =
     return $ noArrays { scenelight = True }
+  parseJSON (Array a) = do
+    items <- sequence . map parseJSON $ V.toList a
+    return . mconcat $ items
   parseJSON _ = mzero
 
 noArrays = ArraySelect
@@ -166,8 +184,6 @@ data Target = Target
   , pixels :: ![Bool]
   } deriving (Show, Read, Generic)
 
-instance FromJSON Target
-
 everything = Target
   { arrays = allArrays
   , pixels = replicate 27 True
@@ -188,6 +204,32 @@ instance Binary Target where
   put (Target as px) = do
     putWord32be . putArraySelect as $ shift (putBitList px zeroBits) 5
 
+instance FromJSON Target where
+  parseJSON (Object o) = do
+    a <- o .: "arrays"
+    msum
+      [ do
+        px :: T.Text <- o .: "pixels"
+        case px of
+          "left" -> return $ Target a leftSide
+          "right" -> return $ Target a rightSide
+          "all" -> return . Target a $ replicate 27 True
+          othervise -> mzero
+      , do
+        px <- o .: "pixels"
+        return $ Target a px
+      ]
+
+  parseJSON (String "all") =
+    return $ everything
+
+  parseJSON (String "left") =
+    return $ everything { pixels = leftSide }
+
+  parseJSON (String "right") =
+    return $ everything { pixels = rightSide }
+
+  parseJSON _ = mzero
 
 data PuppetResponse
   = AllOk
@@ -285,6 +327,31 @@ type PuppetM = Free PuppetProgram
 instance MonadIO (Free PuppetProgram) where
   liftIO m = liftF (DoIO m)
 
+data PuppetInstruction
+  = PSend PuppetCommand
+  | PWait Int
+  deriving (Show, Read)
+
+instance FromJSON PuppetInstruction where
+  parseJSON (Object o) = do
+    inst :: Maybe T.Text <- o .:? "inst"
+    case inst of
+      Just "wait" ->
+        PWait <$> o .: "ms"
+      otherwise ->
+        PSend <$> parseJSON (Object o)
+
+execute :: [PuppetInstruction] -> PuppetM ()
+execute [] = return ()
+execute (a:rest) = do
+  case a of
+    PSend p -> sendP p
+    PWait ms ->
+      liftIO $ do { putStrLn $ "Started Waiting"
+                  ; threadDelay (ms * 1000)
+                  ; putStrLn $ "Waiting " ++ show ms
+                  }
+  execute rest
 
 unsafeRunPuppetry :: SerialPort -> PuppetM a -> IO a
 unsafeRunPuppetry sp puppet =
@@ -306,13 +373,12 @@ unsafeRunPuppetry sp puppet =
               error str
         otherwise -> unsafeRunPuppetry sp $ next rpl
 
-    Pure a -> do
+    Pure a ->
       return a
 
   where
   recvResponse :: SerialPort -> IO PuppetResponse
   recvResponse sp = do
-    flush sp
     bs <- recv sp 1
     print bs
     if 0 == BS.length bs
