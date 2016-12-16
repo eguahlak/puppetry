@@ -36,9 +36,6 @@ int hexValueOf(int c) {
   return 0;
   }
 
-void loop() {
-  // Do nothing, maybe out comment completely?
-  }
 
 #define DONE
 #define WAITING
@@ -102,9 +99,9 @@ byte action (byte b) {
     default:
       return KO;
     }
-}
+  }
 
-void serialEvent () {
+void loop() {
   // Read command.
   while (Serial.available() > 0) {
     byte b = Serial.read();
