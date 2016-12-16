@@ -9,27 +9,16 @@ import qualified Web.Scotty.Trans              as S
 import           Control.Monad.Trans (lift)
 import           Control.Monad.IO.Class (liftIO)
 import           Data.Text.Lazy
-import     System.Posix
+import           System.Posix
 
 import           Puppetry.Protocol
 
 startPuppetServer :: FilePath -> Int -> IO ()
 startPuppetServer fp port = do
-  runPuppetry fp defaultPuppetrySettings $ do
-    test
-    set (everything { arrays = noArrays { scenelight = True }, pixels = leftSide })
-         cRed
-    set (everything { arrays = noArrays { scenelight = True }, pixels = rightSide })
-         cGreen
-    -- set (everything { arrays = noArrays { scenelight = True }}) cRed
-    -- set (everything { arrays = noArrays { backlight = True }}) cBlue
-    -- set (everything { arrays = noArrays { midlight = True }}) cGreen
-    -- set (everything { arrays = noArrays { frontlight = True }}) cRed
-    -- set (everything { arrays = noArrays { sidelight = True }}) cGreen
-    -- set nothing { arrays = noArrays { scenelight = True}} cRed
-
-  -- putStrLn "Starting Puppet Server"
-  -- S.scottyT port (runPuppetry fp defaultPuppetrySettings) app
+  putStrLn "Starting Puppet Server"
+  withSerial fp defaultPuppetrySettings $ \sp -> do
+    printAll sp
+    S.scottyT port (unsafeRunPuppetry sp) app
 
 app :: S.ScottyT Text PuppetM ()
 app = do
