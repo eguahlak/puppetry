@@ -96,7 +96,6 @@
               })
             .fail(function(msg) { error = msg; })
             }
-          }
     </script>
   </head>
   <body>
@@ -105,5 +104,18 @@
     <p><button onclick="allBlue(this);">Alle blaa</button></p>
     <p><button onclick="allRed(this);">Alle roede</button></p>
     <p><button onclick="doAction(this, [new Set('all', 'ffccaa')]);">Strand</button></p>
+    <p>
+
+    <form>
+      <input name="color" type="color"></input>
+      <input name="arrays" value="back" type="checkbox">back</input>
+      <input name="arrays" value="mid" type="checkbox">mid</input>
+      <input name="arrays" value="front" type="checkbox">front</input>
+      <input name="arrays" value="side" type="checkbox">side</input>
+      <input name="arrays" value="scene" type="checkbox">scene</input>
+      <input value="left" name="pixels" type="radio"></input>
+      <input value="right" name="pixels" type="radio"></input>
+      <input value="all" name="pixels" type="radio"></input>
+    </form>
   </body>
 </html>
