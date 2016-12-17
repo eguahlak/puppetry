@@ -98,42 +98,47 @@
         }
       var strandColor = [new Set('all', 'ffccaa')]
       var seaColor = [
-        new Set('all', 'aaaaff'), 
-        new Set('back', '0000cc'), 
-        new Set('mid', '0000ff'), 
-        new Set('front', '8888ff'), 
-        new Set('side', '8888ff')
+        new Set(new Target("scene", 'all'), 'aaaaff'),
+        new Set(new Target('back', "all"), '000022'),
+        new Set(new Target('mid', "all"), '0000aa'),
+        new Set(new Target('front', "all"), '2222ff'),
+        new Set(new Target('side', "all"), '8888ff')
         ];
-      var blink = [ { "cmd": "set"
-        , "color": "000000"
-        , "target": "all"
-        }
-      , { "cmd": "set"
+     var blink = [
+      { "cmd": "set"
+        , "color": "0"
+        , "target": new Target("all", "all")
+      }
+      ,
+        { "cmd": "set"
         , "color": "ffffff"
-        , "target": "left"
+        , "target":  new Target("side", "left")
         }
       , { "inst": "wait"
         , "ms": 50
         }
       , { "cmd": "set"
         , "color": "000000"
-        , "target": "all"
+        , "target": new Target("side", "all")
         }
       , { "inst": "wait"
         , "ms": 500
         }
       , { "cmd": "set"
         , "color": "ffffff"
-        , "target": "right"
+        , "target": new Target("side", "right")
         }
       , { "inst": "wait"
         , "ms": 200
         }
-      , { "cmd": "set"
-        , "color": "000000"
-        , "target": "all"
-        }
-      ]
+     ]
+     blink = blink.concat(seaColor);
+
+     var dangerColor = [
+         new Set("left", "ff0000")
+     ]
+
+     var sort = [new Set("all", "0")]
     </script>
   </head>
   <body>
@@ -142,6 +147,8 @@
     <p><button onclick="doAction(this, strandColor);">Strand</button></p>
     <p><button onclick="doAction(this, seaColor);">Hav</button></p>
     <p><button onclick="doAction(this, blink);">Elaal</button></p>
+    <p><button onclick="doAction(this, dangerColor);">Fare</button></p>
+    <p><button onclick="doAction(this, sort);">Sort</button></p>
     <p>
 
     <form>
