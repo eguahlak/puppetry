@@ -77,33 +77,71 @@
           })
         .fail(function(msg) { error = msg; })
         }
-        function allRed(button) {
-          button.style.color = "#ff0000";
-          $.post({
-            url: "/api",
-            dataType: "json",
-            data: JSON.stringify([new Set("all", "ff0000")]),
-            success: function(data) { button.style.color = "#00ff00"; }
-            })
-          .fail(function(msg) { error = msg; })
-          }
-          function doAction(button, action) {
-            $.post({
-              url: "/api",
-              dataType: "json",
-              data: JSON.stringify(action),
-              success: function(data) { button.style.color = "#00ff00"; }
-              })
-            .fail(function(msg) { error = msg; })
-            }
+      function allRed(button) {
+        button.style.color = "#ff0000";
+        $.post({
+          url: "/api",
+          dataType: "json",
+          data: JSON.stringify([new Set("all", "ff0000")]),
+          success: function(data) { button.style.color = "#00ff00"; }
+          })
+        .fail(function(msg) { error = msg; })
+        }
+      function doAction(button, action) {
+        $.post({
+          url: "/api",
+          dataType: "json",
+          data: JSON.stringify(action),
+          success: function(data) { button.style.color = "#00ff00"; }
+          })
+        .fail(function(msg) { error = msg; })
+        }
+      var strandColor = [new Set('all', 'ffccaa')]
+      var seaColor = [
+        new Set('all', 'aaaaff'), 
+        new Set('back', '0000cc'), 
+        new Set('mid', '0000ff'), 
+        new Set('front', '8888ff'), 
+        new Set('side', '8888ff')
+        ];
+      var blink = [ { "cmd": "set"
+        , "color": "000000"
+        , "target": "all"
+        }
+      , { "cmd": "set"
+        , "color": "ffffff"
+        , "target": "left"
+        }
+      , { "inst": "wait"
+        , "ms": 50
+        }
+      , { "cmd": "set"
+        , "color": "000000"
+        , "target": "all"
+        }
+      , { "inst": "wait"
+        , "ms": 500
+        }
+      , { "cmd": "set"
+        , "color": "ffffff"
+        , "target": "right"
+        }
+      , { "inst": "wait"
+        , "ms": 200
+        }
+      , { "cmd": "set"
+        , "color": "000000"
+        , "target": "all"
+        }
+      ]
     </script>
   </head>
   <body>
     Puppetry!
     <hr/>
-    <p><button onclick="allBlue(this);">Alle blaa</button></p>
-    <p><button onclick="allRed(this);">Alle roede</button></p>
-    <p><button onclick="doAction(this, [new Set('all', 'ffccaa')]);">Strand</button></p>
+    <p><button onclick="doAction(this, strandColor);">Strand</button></p>
+    <p><button onclick="doAction(this, seaColor);">Hav</button></p>
+    <p><button onclick="doAction(this, blink);">Elaal</button></p>
     <p>
 
     <form>
