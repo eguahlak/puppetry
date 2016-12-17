@@ -92,7 +92,7 @@
           url: "/api",
           dataType: "json",
           data: JSON.stringify(action),
-          success: function(data) { button.style.color = "#00ff00"; }
+          success: function(data) {  }
           })
         .fail(function(msg) { error = msg; })
         }
@@ -139,6 +139,24 @@
      ]
 
      var sort = [new Set("all", "0")]
+     var action = {
+       cmd: "set",
+       target: {
+         arrays: [],
+         pixels: "all"
+         },
+       color: "000000" 
+       }
+     function doIt() {
+       console.log("doing it?");
+       var arrays = [];
+       $('input.arrays:checked').each(function() { arrays.push(this.value); });
+       action.target.arrays = arrays;
+       action.color = document.getElementById("theColor").value.substring(1);
+       action.target.pixels = $("input:radio[name = 'pixels']:checked").val();
+       // alert(JSON.stringify(action));
+       doAction(null, [action]);
+       }
     </script>
   </head>
   <body>
@@ -151,16 +169,17 @@
     <p><button onclick="doAction(this, sort);">Sort</button></p>
     <p>
 
-    <form>
-      <input name="color" type="color"></input>
-      <input name="arrays" value="back" type="checkbox">back</input>
-      <input name="arrays" value="mid" type="checkbox">mid</input>
-      <input name="arrays" value="front" type="checkbox">front</input>
-      <input name="arrays" value="side" type="checkbox">side</input>
-      <input name="arrays" value="scene" type="checkbox">scene</input>
-      <input value="left" name="pixels" type="radio"></input>
+    <form name="AwesomeColorForm">
+      <input id="theColor" value="#ffffff" name="color" type="color"></input>
+      <input class="arrays" checked value="back" type="checkbox">back</input>
+      <input class="arrays" checked value="mid" type="checkbox">mid</input>
+      <input class="arrays" checked value="front" type="checkbox">front</input>
+      <input class="arrays" checked value="side" type="checkbox">side</input>
+      <input class="arrays" checked value="scene" type="checkbox">scene</input>
+      <input value="left" name="pixels" type="radio"></input> &lt;
+      <input value="all" name="pixels" type="radio"  checked></input> &gt;
       <input value="right" name="pixels" type="radio"></input>
-      <input value="all" name="pixels" type="radio"></input>
+      <button onclick="doIt()">Let there be light</button>
     </form>
   </body>
 </html>
