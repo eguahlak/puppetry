@@ -169,8 +169,8 @@
     <p><button onclick="doAction(this, sort);">Sort</button></p>
     <p>
 
-    <form name="AwesomeColorForm">
-      <input id="theColor" value="#ffffff" name="color" type="color"></input>
+    <div name="AwesomeColorForm">
+      <input onchange="doIt()" id="theColor" value="#ffffff" name="color" type="color"></input>
       <input class="arrays" checked value="back" type="checkbox">back</input>
       <input class="arrays" checked value="mid" type="checkbox">mid</input>
       <input class="arrays" checked value="front" type="checkbox">front</input>
@@ -180,6 +180,6 @@
       <input value="all" name="pixels" type="radio"  checked></input> &gt;
       <input value="right" name="pixels" type="radio"></input>
       <button onclick="doIt()">Let there be light</button>
-    </form>
+    </div>
   </body>
 </html>
