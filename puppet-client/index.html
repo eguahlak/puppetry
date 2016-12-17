@@ -1,6 +1,109 @@
+<!DOCTYPE html>
 <html>
-
+  <head>
+    <script src="jquery.js"></script>
+    <script>
+      
+      $(document).ready(init);
+    
+      function Set(target, color) {
+        this.cmd = "set";
+        this.target = target;
+        this.color = color;  
+        }
+      
+      function Wait(ms) {
+        this.inst = "wait";
+        this.ms = ms;
+        }
+        
+        function Target(arrays, pixels) {
+          if (pixels == null) pixels = "all";
+          this.arrays = arrays;
+          this.pixels = pixels;
+        }
+/*
+      var scripts = [
+        [
+        	{
+        		"cmd": "set",
+        		"target": "all",
+        		"color": "000000"
+        	},
+        	{
+        		"inst": "wait",
+        		"ms": 1000
+        	},
+        	{
+        		"cmd": "set",
+        		"target": {
+        		   "arrays": [ "scene", "back" ],
+        		   "pixels": "all"
+        		},
+        		"color": "ff0000"
+        	},
+        	{
+        		"inst": "wait",
+        		"ms": 2000
+        	},
+            {
+        		"cmd": "set",
+        		"target": {
+        		   "arrays": [ "mid", "front" ],
+        		   "pixels": "all"
+        		},
+        		"color": "00ff00"
+        	}	
+        ]
+        
+        ]
+  */
+      function init() {
+        console.log("ready!");
+        }
+    
+        var error;
+        
+        var smallsc = [new Set("all", "0000ff"), new Wait(2000), new Set(new Target(["scene","mid"]), "ffcc00")];
+        
+      function allBlue(button) {
+        alert(JSON.stringify(smallsc));
+        button.style.color = "#ff0000";
+        $.post({
+          url: "/api",
+          dataType: "json",
+          data: JSON.stringify(smallsc),
+          success: function(data) { button.style.color = "#00ff00"; }
+          })
+        .fail(function(msg) { error = msg; })
+        }
+        function allRed(button) {
+          button.style.color = "#ff0000";
+          $.post({
+            url: "/api",
+            dataType: "json",
+            data: JSON.stringify([new Set("all", "ff0000")]),
+            success: function(data) { button.style.color = "#00ff00"; }
+            })
+          .fail(function(msg) { error = msg; })
+          }
+          function doAction(button, action) {
+            $.post({
+              url: "/api",
+              dataType: "json",
+              data: JSON.stringify(action),
+              success: function(data) { button.style.color = "#00ff00"; }
+              })
+            .fail(function(msg) { error = msg; })
+            }
+          }
+    </script>
+  </head>
   <body>
-    Hello, World!
+    Puppetry!
+    <hr/>
+    <p><button onclick="allBlue(this);">Alle blaa</button></p>
+    <p><button onclick="allRed(this);">Alle roede</button></p>
+    <p><button onclick="doAction(this, [new Set('all', 'ffccaa')]);">Strand</button></p>
   </body>
 </html>

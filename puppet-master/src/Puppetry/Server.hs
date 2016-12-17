@@ -38,9 +38,13 @@ app = do
   S.middleware $ staticPolicy (noDots >-> addBase "../puppet-client")
   S.get "/" $ do
     S.file "../puppet-client/index.html"
-    S.setHeader "Content-Type" "html"
+    S.setHeader "Content-Type" "text/html"
 
-  S.put "/api" $ do
+  S.get "/jquey.js" $ do
+    S.file "../puppet-client/jquery.js"
+    S.setHeader "Content-Type" "application/javascript"
+
+  S.post "/api" $ do
     cmds <- S.jsonData
     lift $ execute cmds
 
