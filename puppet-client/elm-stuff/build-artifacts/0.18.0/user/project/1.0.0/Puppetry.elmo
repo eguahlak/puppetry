@@ -1,0 +1,23 @@
+var _user$project$Puppetry$Strip = F3(
+	function (a, b, c) {
+		return {pixelCount: a, name: b, pixels: c};
+	});
+var _user$project$Puppetry$strip = F2(
+	function (pixelCount, name) {
+		return A3(
+			_user$project$Puppetry$Strip,
+			pixelCount,
+			name,
+			A2(_elm_lang$core$List$repeat, pixelCount, '#ff0000'));
+	});
+var _user$project$Puppetry$Puppetry = F5(
+	function (a, b, c, d, e) {
+		return {back: a, middle: b, front: c, side: d, proscenium: e};
+	});
+var _user$project$Puppetry$puppetry = A5(
+	_user$project$Puppetry$Puppetry,
+	A2(_user$project$Puppetry$strip, 27, 'Bagscene'),
+	A2(_user$project$Puppetry$strip, 27, 'Mellemscene'),
+	A2(_user$project$Puppetry$strip, 27, 'Forscene'),
+	A2(_user$project$Puppetry$strip, 12, 'Sidelys'),
+	A2(_user$project$Puppetry$strip, 23, 'Proscenie'));
