@@ -1,6 +1,35 @@
 var _user$project$Main$update = F2(
 	function (message, model) {
-		return {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
+		var _p0 = message;
+		switch (_p0.ctor) {
+			case 'PuppetryMessage':
+				var _p1 = _p0._0;
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{
+							action: _user$project$Puppetry$pixelStringOf(_p1),
+							puppetry: A2(_user$project$Puppetry$update, _p1, model.puppetry)
+						}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			case 'ColorSelected':
+				var p = model.puppetry;
+				return {
+					ctor: '_Tuple2',
+					_0: _elm_lang$core$Native_Utils.update(
+						model,
+						{
+							puppetry: _elm_lang$core$Native_Utils.update(
+								p,
+								{color: _p0._0})
+						}),
+					_1: _elm_lang$core$Platform_Cmd$none
+				};
+			default:
+				return {ctor: '_Tuple2', _0: model, _1: _elm_lang$core$Platform_Cmd$none};
+		}
 	});
 var _user$project$Main$Model = F2(
 	function (a, b) {
@@ -8,8 +37,11 @@ var _user$project$Main$Model = F2(
 	});
 var _user$project$Main$init = {
 	ctor: '_Tuple2',
-	_0: A2(_user$project$Main$Model, _user$project$Puppetry$puppetry, ''),
+	_0: A2(_user$project$Main$Model, _user$project$Puppetry$puppetry, 'No action yet'),
 	_1: _elm_lang$core$Platform_Cmd$none
+};
+var _user$project$Main$PuppetryMessage = function (a) {
+	return {ctor: 'PuppetryMessage', _0: a};
 };
 var _user$project$Main$NewMessage = function (a) {
 	return {ctor: 'NewMessage', _0: a};
@@ -21,72 +53,8 @@ var _user$project$Main$Send = {ctor: 'Send'};
 var _user$project$Main$Input = function (a) {
 	return {ctor: 'Input', _0: a};
 };
-var _user$project$Main$PixelClicked = function (a) {
-	return {ctor: 'PixelClicked', _0: a};
-};
-var _user$project$Main$viewPixel = F2(
-	function (strip, color) {
-		return A2(
-			_elm_lang$html$Html$input,
-			{
-				ctor: '::',
-				_0: _elm_lang$html$Html_Attributes$type_('checkbox'),
-				_1: {
-					ctor: '::',
-					_0: _elm_lang$html$Html_Attributes$style(
-						{
-							ctor: '::',
-							_0: {ctor: '_Tuple2', _0: 'background-color', _1: color},
-							_1: {
-								ctor: '::',
-								_0: {ctor: '_Tuple2', _0: 'color', _1: color},
-								_1: {ctor: '[]'}
-							}
-						}),
-					_1: {
-						ctor: '::',
-						_0: _elm_lang$html$Html_Events$onCheck(_user$project$Main$PixelClicked),
-						_1: {ctor: '[]'}
-					}
-				}
-			},
-			{ctor: '[]'});
-	});
-var _user$project$Main$viewStrip = function (strip) {
-	return A2(
-		_elm_lang$html$Html$div,
-		{
-			ctor: '::',
-			_0: _elm_lang$html$Html_Attributes$style(
-				{
-					ctor: '::',
-					_0: {ctor: '_Tuple2', _0: 'border', _1: '1px solid red'},
-					_1: {ctor: '[]'}
-				}),
-			_1: {ctor: '[]'}
-		},
-		{
-			ctor: '::',
-			_0: A2(
-				_elm_lang$html$Html$div,
-				{ctor: '[]'},
-				{
-					ctor: '::',
-					_0: _elm_lang$html$Html$text(strip.name),
-					_1: {ctor: '[]'}
-				}),
-			_1: {
-				ctor: '::',
-				_0: A2(
-					_elm_lang$html$Html$div,
-					{ctor: '[]'},
-					A2(
-						_elm_lang$core$List$map,
-						_user$project$Main$viewPixel(strip),
-						strip.pixels)),
-				_1: {ctor: '[]'}
-			}
-		});
+var _user$project$Main$ColorSelected = function (a) {
+	return {ctor: 'ColorSelected', _0: a};
 };
 var _user$project$Main$view = function (model) {
 	return A2(
@@ -96,31 +64,74 @@ var _user$project$Main$view = function (model) {
 			ctor: '::',
 			_0: A2(
 				_elm_lang$html$Html$div,
-				{ctor: '[]'},
 				{
 					ctor: '::',
-					_0: _elm_lang$html$Html$text('Hello World!'),
+					_0: _elm_lang$html$Html_Attributes$width(400),
+					_1: {
+						ctor: '::',
+						_0: _elm_lang$html$Html_Attributes$style(
+							{
+								ctor: '::',
+								_0: {ctor: '_Tuple2', _0: 'text-align', _1: 'center'},
+								_1: {ctor: '[]'}
+							}),
+						_1: {ctor: '[]'}
+					}
+				},
+				{
+					ctor: '::',
+					_0: _elm_lang$html$Html$text('The faboulous Elm Puppetry App'),
 					_1: {ctor: '[]'}
 				}),
 			_1: {
 				ctor: '::',
-				_0: _user$project$Main$viewStrip(model.puppetry.back),
+				_0: A2(
+					_elm_lang$html$Html$map,
+					_user$project$Main$PuppetryMessage,
+					_user$project$Puppetry$view(model.puppetry)),
 				_1: {
 					ctor: '::',
-					_0: _user$project$Main$viewStrip(model.puppetry.middle),
-					_1: {
-						ctor: '::',
-						_0: _user$project$Main$viewStrip(model.puppetry.front),
-						_1: {
+					_0: A2(
+						_elm_lang$html$Html$div,
+						{
 							ctor: '::',
-							_0: _user$project$Main$viewStrip(model.puppetry.side),
+							_0: _elm_lang$html$Html_Attributes$style(
+								{
+									ctor: '::',
+									_0: {ctor: '_Tuple2', _0: 'border', _1: '1px solid red'},
+									_1: {ctor: '[]'}
+								}),
+							_1: {ctor: '[]'}
+						},
+						{
+							ctor: '::',
+							_0: _elm_lang$html$Html$text(
+								A2(
+									_elm_lang$core$Basics_ops['++'],
+									model.action,
+									A2(_elm_lang$core$Basics_ops['++'], '  ', model.puppetry.color))),
 							_1: {
 								ctor: '::',
-								_0: _user$project$Main$viewStrip(model.puppetry.proscenium),
+								_0: A2(
+									_elm_lang$html$Html$input,
+									{
+										ctor: '::',
+										_0: _elm_lang$html$Html_Attributes$type_('color'),
+										_1: {
+											ctor: '::',
+											_0: _elm_lang$html$Html_Events$onInput(_user$project$Main$ColorSelected),
+											_1: {
+												ctor: '::',
+												_0: _elm_lang$html$Html_Attributes$value(model.puppetry.color),
+												_1: {ctor: '[]'}
+											}
+										}
+									},
+									{ctor: '[]'}),
 								_1: {ctor: '[]'}
 							}
-						}
-					}
+						}),
+					_1: {ctor: '[]'}
 				}
 			}
 		});

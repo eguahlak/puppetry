@@ -1,8 +1,8 @@
 import Array exposing (Array)
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onCheck, onClick)
-import Puppetry exposing (..)
+import Html.Events exposing (onCheck, onClick, onInput)
+import Puppetry exposing (Puppetry, puppetry)
 import WebSocket
 
 main = program
@@ -15,7 +15,7 @@ main = program
 -- Initialization
 
 init: (Model, Cmd message)
-init = (Model puppetry "", Cmd.none)
+init = (Model Puppetry.puppetry "No action yet", Cmd.none)
 
 -- Model
 
@@ -26,15 +26,28 @@ type alias Model =
 
 -- Update
 type Message
-    = PixelClicked Bool
+    = ColorSelected String
     | Input String
     | Send
     | NewMessage String
+    | PuppetryMessage Puppetry.Message
 
 update : Message -> Model -> (Model, Cmd Message)
-update message model = (model, Cmd.none)
-    --case message of
-    --    PixelClicked value -> model
+update message model =
+    case message of
+        PuppetryMessage subMessage ->
+            ( { model
+              | action = Puppetry.pixelStringOf subMessage
+              , puppetry = Puppetry.update subMessage model.puppetry
+              }
+            , Cmd.none
+            )
+        ColorSelected value ->
+            let
+                p = model.puppetry
+            in
+                ( { model | puppetry = { p | color = value } }, Cmd.none)
+        _ -> (model, Cmd.none)
 
 -- Subscriptions
 
@@ -48,33 +61,15 @@ view : Model -> Html Message
 view model =
     div []
         [ div
-            []
-            [ text "Hello World!" ]
-        , viewStrip model.puppetry.back
-        , viewStrip model.puppetry.middle
-        , viewStrip model.puppetry.front
-        , viewStrip model.puppetry.side
-        , viewStrip model.puppetry.proscenium
-        ]
-
-viewStrip : Strip -> Html Message
-viewStrip strip =
-    div [ style [("border","1px solid red")] ]
-        [ div
-            []
-            [ text strip.name ]
-        , div
-            []
-            (List.map (viewPixel strip) strip.pixels)
-        ]
-
-viewPixel : Strip -> Color -> Html Message
-viewPixel strip color =
-    input
-        [ type_ "checkbox"
-        , style
-            [ ("background-color", color)
-            , ("color", color)
+            [ width 400, style [ ("text-align", "center") ] ]
+            [ text "The faboulous Elm Puppetry App" ]
+        , Html.map PuppetryMessage (Puppetry.view model.puppetry)
+        , div [ style [("border","1px solid red")] ]
+            [ text (model.action++"  "++model.puppetry.color)
+            , input
+                [ type_ "color"
+                , onInput ColorSelected
+                , value model.puppetry.color ][ ]
             ]
-        , onCheck PixelClicked         ]
-        [ ]
+        ]
+
