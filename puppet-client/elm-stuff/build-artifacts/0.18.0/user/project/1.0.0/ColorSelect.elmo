@@ -1,0 +1,218 @@
+var _user$project$ColorSelect$colorToCss = function (color) {
+	return A2(
+		_elm_lang$core$Basics_ops['++'],
+		'rgb(',
+		A2(
+			_elm_lang$core$Basics_ops['++'],
+			_elm_lang$core$Basics$toString(color.red),
+			A2(
+				_elm_lang$core$Basics_ops['++'],
+				',',
+				A2(
+					_elm_lang$core$Basics_ops['++'],
+					_elm_lang$core$Basics$toString(color.green),
+					A2(
+						_elm_lang$core$Basics_ops['++'],
+						',',
+						A2(
+							_elm_lang$core$Basics_ops['++'],
+							_elm_lang$core$Basics$toString(color.blue),
+							')'))))));
+};
+var _user$project$ColorSelect$update = F2(
+	function (color, model) {
+		var _p0 = color;
+		if (_p0.ctor === 'SetColor') {
+			return {
+				ctor: '_Tuple2',
+				_0: _elm_lang$core$Native_Utils.update(
+					model,
+					{color: _p0._0, selection: _elm_lang$core$Maybe$Nothing}),
+				_1: _elm_lang$core$Platform_Cmd$none
+			};
+		} else {
+			return {
+				ctor: '_Tuple2',
+				_0: _elm_lang$core$Native_Utils.update(
+					model,
+					{selection: _p0._0}),
+				_1: _elm_lang$core$Platform_Cmd$none
+			};
+		}
+	});
+var _user$project$ColorSelect$colorFromSelection = function (sel) {
+	var clp = (A3(_elm_lang$core$Basics$clamp, 20, 120, sel.dist) - 20) / 100;
+	return A3(
+		_elm_lang$core$Color$hsl,
+		_elm_lang$core$Basics$radians(sel.angle),
+		1,
+		clp);
+};
+var _user$project$ColorSelect$init = {
+	ctor: '_Tuple2',
+	_0: {
+		position: {x: 200, y: 200},
+		color: A3(_elm_lang$core$Color$rgb, 128, 128, 0),
+		selection: _elm_lang$core$Maybe$Nothing
+	},
+	_1: _elm_lang$core$Platform_Cmd$none
+};
+var _user$project$ColorSelect$Selection = F2(
+	function (a, b) {
+		return {dist: a, angle: b};
+	});
+var _user$project$ColorSelect$Model = F3(
+	function (a, b, c) {
+		return {color: a, selection: b, position: c};
+	});
+var _user$project$ColorSelect$SetSelectionMode = function (a) {
+	return {ctor: 'SetSelectionMode', _0: a};
+};
+var _user$project$ColorSelect$view = F2(
+	function (current, f) {
+		var color = _elm_lang$core$Color$toRgb(current.color);
+		return A2(
+			_elm_lang$svg$Svg$g,
+			{
+				ctor: '::',
+				_0: _elm_lang$svg$Svg_Attributes$transform(
+					A2(
+						_elm_lang$core$Basics_ops['++'],
+						'translate(',
+						A2(
+							_elm_lang$core$Basics_ops['++'],
+							_elm_lang$core$Basics$toString(current.position.x),
+							A2(
+								_elm_lang$core$Basics_ops['++'],
+								',',
+								A2(
+									_elm_lang$core$Basics_ops['++'],
+									_elm_lang$core$Basics$toString(current.position.y),
+									')'))))),
+				_1: {ctor: '[]'}
+			},
+			A2(
+				_elm_lang$core$Basics_ops['++'],
+				function () {
+					var _p1 = current.selection;
+					if (_p1.ctor === 'Just') {
+						var _p2 = _p1._0;
+						return {
+							ctor: '::',
+							_0: A2(
+								_elm_lang$svg$Svg$circle,
+								{
+									ctor: '::',
+									_0: _elm_lang$svg$Svg_Attributes$stroke(
+										_user$project$ColorSelect$colorToCss(
+											_elm_lang$core$Color$toRgb(
+												_user$project$ColorSelect$colorFromSelection(_p2)))),
+									_1: {
+										ctor: '::',
+										_0: _elm_lang$svg$Svg_Attributes$strokeWidth('5px'),
+										_1: {
+											ctor: '::',
+											_0: _elm_lang$svg$Svg_Attributes$fill('none'),
+											_1: {
+												ctor: '::',
+												_0: _elm_lang$svg$Svg_Attributes$r(
+													_elm_lang$core$Basics$toString(_p2.dist)),
+												_1: {ctor: '[]'}
+											}
+										}
+									}
+								},
+								{ctor: '[]'}),
+							_1: {ctor: '[]'}
+						};
+					} else {
+						return {ctor: '[]'};
+					}
+				}(),
+				{
+					ctor: '::',
+					_0: A2(
+						_elm_lang$svg$Svg$circle,
+						{
+							ctor: '::',
+							_0: _elm_lang$svg$Svg_Attributes$r('20'),
+							_1: {
+								ctor: '::',
+								_0: _elm_lang$svg$Svg_Events$onMouseDown(
+									_user$project$ColorSelect$SetSelectionMode(
+										_elm_lang$core$Maybe$Just(
+											{dist: 0, angle: 0}))),
+								_1: {
+									ctor: '::',
+									_0: _elm_lang$svg$Svg_Attributes$stroke('black'),
+									_1: {
+										ctor: '::',
+										_0: _elm_lang$svg$Svg_Attributes$fill(
+											_user$project$ColorSelect$colorToCss(color)),
+										_1: {ctor: '[]'}
+									}
+								}
+							}
+						},
+						{ctor: '[]'}),
+					_1: {ctor: '[]'}
+				}));
+	});
+var _user$project$ColorSelect$SetColor = function (a) {
+	return {ctor: 'SetColor', _0: a};
+};
+var _user$project$ColorSelect$subscriptions = function (model) {
+	var _p3 = model.selection;
+	if (_p3.ctor === 'Nothing') {
+		return _elm_lang$core$Platform_Sub$none;
+	} else {
+		return _elm_lang$core$Platform_Sub$batch(
+			{
+				ctor: '::',
+				_0: _elm_lang$mouse$Mouse$moves(
+					function (pos) {
+						var vect = {
+							x: _elm_lang$core$Basics$toFloat(pos.y - model.position.y),
+							y: _elm_lang$core$Basics$toFloat(pos.x - model.position.x)
+						};
+						var angle = A2(_elm_lang$core$Basics$atan2, vect.x, vect.y);
+						return _user$project$ColorSelect$SetSelectionMode(
+							_elm_lang$core$Maybe$Just(
+								{
+									angle: A2(_elm_lang$core$Basics$atan2, vect.x, vect.y),
+									dist: _elm_lang$core$Basics$sqrt(
+										Math.pow(vect.x, 2) + Math.pow(vect.y, 2))
+								}));
+					}),
+				_1: {
+					ctor: '::',
+					_0: _elm_lang$mouse$Mouse$ups(
+						function (_p4) {
+							return _user$project$ColorSelect$SetColor(
+								_user$project$ColorSelect$colorFromSelection(_p3._0));
+						}),
+					_1: {ctor: '[]'}
+				}
+			});
+	}
+};
+var _user$project$ColorSelect$testView = function (m) {
+	return A2(
+		_elm_lang$svg$Svg$svg,
+		{
+			ctor: '::',
+			_0: _elm_lang$svg$Svg_Attributes$width('400'),
+			_1: {
+				ctor: '::',
+				_0: _elm_lang$svg$Svg_Attributes$height('400'),
+				_1: {ctor: '[]'}
+			}
+		},
+		{
+			ctor: '::',
+			_0: A2(_user$project$ColorSelect$view, m, _user$project$ColorSelect$SetColor),
+			_1: {ctor: '[]'}
+		});
+};
+var _user$project$ColorSelect$main = _elm_lang$html$Html$program(
+	{init: _user$project$ColorSelect$init, view: _user$project$ColorSelect$testView, update: _user$project$ColorSelect$update, subscriptions: _user$project$ColorSelect$subscriptions})();
