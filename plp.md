@@ -70,18 +70,31 @@ a byte, from the command-table below.
 0x00
 ```
 Does nothing, send 9 nops to resync
+
 ### Set 0x01
 ```
 0x01 <target> <color> 
 ```
 Instantly sets the <target> with the color <color> 
 
-### Gradient 0x02
+### Commit 0x02
 ```
-0x02 <time> <target> <color> 
+0x02 <time> <curve>
 ```
-Over `<time>` ms move color of all `<target>` from the previous color to the
-new `<color>`.
+
+Over `<time>` commit this new color.
+
+### Wait 0x03
+```
+0x03 <time>
+```
+Wait `<time>` for executing the next command. (Mostly useful for scripting)
+
+### Goto 0x04
+```
+0x04 <time> 
+```
+Go to `<time>` in current script.
 
 ### Test 0xff
 ```
