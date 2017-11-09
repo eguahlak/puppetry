@@ -1,21 +1,12 @@
-module ColorSelect exposing (..)
+module Puppetry.ColorSelect exposing (..)
 
-import Color exposing (Color, rgb, toRgb)
+import Color exposing (Color, rgb, toRgb, toHsl)
 import Html exposing (Html)
-import Json.Decode as Decode
+-- import Json.Decode as Decode
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Svg.Events exposing (..)
 import Mouse exposing (position, Position, moves)
-
-
-main =
-  Html.program
-    { init = init
-    , view = testView
-    , update = update
-    , subscriptions = subscriptions
-    }
 
 type alias Selection =
   { dist : Float, angle : Float}
@@ -54,13 +45,20 @@ subscriptions model =
                                              , dist = sqrt (vect.x^2 + vect.y^2)
                                              })
               )
-        , Mouse.ups (\_ -> SetColor (colorFromSelection x))
+        , Mouse.ups (\_ -> if x.dist < 20 then SetSelectionMode Nothing else SetColor (colorFromSelection x))
         ]
 
 
+colorFromSelection : Selection -> Color
 colorFromSelection sel =
     let clp = ((clamp 20 120 sel.dist) - 20) / 100
     in Color.hsl (radians sel.angle) 1 clp
+
+selectionFromColor : Color -> Selection
+selectionFromColor color =
+    let hsl = toHsl color
+        dist = (hsl.lightness) * 100 + 20
+    in Selection dist (hsl.hue)
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update color model =
@@ -71,12 +69,6 @@ update color model =
       ( { model | selection = b }, Cmd.none)
 
 
-testView : Model -> Html Msg
-testView m =
-  svg [ width "400", height "400"]
-    [ view m SetColor ]
-
-
 view : Model -> (Color -> Msg) -> Svg Msg
 view current f =
   let color = toRgb current.color
@@ -84,12 +76,32 @@ view current f =
              ++ toString current.position.x ++ ","
              ++ toString current.position.y ++ ")")]
       ((case current.selection of
-           Just sel -> [
+           Just sel ->
+            let csel = selectionFromColor current.color
+            in [
                 circle
                     [ stroke (colorFromSelection sel |> toRgb |> colorToCss)
                     , strokeWidth "5px"
                     , fill "none"
                     , r (toString sel.dist)
+                    ] []
+                , circle
+                    [ stroke (current.color |> toRgb |> colorToCss)
+                    , strokeWidth "2px"
+                    , fill "none"
+                    , r (toString csel.dist)
+                    ] []
+                , line
+                    [ stroke (colorFromSelection sel |> toRgb |> colorToCss)
+                    , strokeWidth "5px"
+                    , x2 (toString ((cos sel.angle) * sel.dist) ++ "px")
+                    , y2 (toString ((sin sel.angle) * sel.dist) ++ "px")
+                    ] []
+                , line
+                    [ stroke (current.color |> toRgb |> colorToCss)
+                    , strokeWidth "2px"
+                    , x2 (toString ((cos csel.angle) * csel.dist) ++ "px")
+                    , y2 (toString ((sin csel.angle) * csel.dist) ++ "px")
                     ] []
            ]
            Nothing -> []
@@ -103,6 +115,7 @@ view current f =
        ]
       )
 
+colorToCss : { d | blue : a, green : b, red : c } -> String
 colorToCss color =
     "rgb(" ++ toString color.red ++ ","
            ++ toString color.green ++ ","
