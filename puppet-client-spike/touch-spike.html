@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Touch spike</title>
+  <style>
+    div#canvas {
+      border: 1px solid blue;
+
+      }
+  </style>
+  <script>
+    var canvas;
+    var output;
+
+    function init() {
+      output = document.getElementById("output");
+      output.innerText = "Ready."
+
+      canvas = document.getElementById("canvas");
+      canvas.addEventListener('touchstart', handleTouchStart, false);
+      canvas.addEventListener('touchmove', handleTouchMove, false);
+      }
+
+    function handleTouchStart(touchEvent) {
+      output.innerText += "START ";
+      }
+
+    function handleTouchMove(touchEvent) {
+      output.innerText += "MOVE ";
+      }
+  </script>
+</head>
+
+<body onload="init();">
+  <h1>Touch spike</h1>
+  <canvas style="border: 1px solid red;" id="canvas" width="300" height="300">
+    No canvas support, choose other browser
+  </canvas>
+  <div id="output" rows="10">
+    Logging goes here.
+  </div>
+</body>
