@@ -1,22 +1,28 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <head>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 
-    <style>
-.jumbotron {
-  background-color: #e6ffe6;
-  text-align: center;
-}
-    </style>
-  </head>
+        <!-- android -->
+        <meta name="mobile-web-app-capable" content="yes">
+        <!-- iOS -->
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="translucent-black">
+        <meta name="apple-mobile-web-app-title" content="Ei Blot Til Lyst">
+        <style>
+         .jumbotron {
+             background-color: #e6ffe6;
+             text-align: center;
+         }
+        </style>
+    </head>
 
-  <body>
-    <div id="elm-code-is-loaded-here"></div>
+    <body>
+        <div id="elm-code-is-loaded-here"></div>
 
-    <script src="elm.js"></script>
-    <script>
-        Elm.Main.embed(document.getElementById("elm-code-is-loaded-here"));
-    </script>
-  </body>
+        <script src="elm.js"></script>
+        <script>
+         Elm.Main.embed(document.getElementById("elm-code-is-loaded-here"));
+        </script>
+    </body>
 </html>
