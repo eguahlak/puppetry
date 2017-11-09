@@ -11,23 +11,55 @@
   </style>
   <script>
     var canvas;
+    var context;
     var output;
+    var force = 1;
 
     function init() {
       output = document.getElementById("output");
       output.innerText = "Ready."
 
       canvas = document.getElementById("canvas");
+      context = canvas.getContext("2d");
       canvas.addEventListener('touchstart', handleTouchStart, false);
       canvas.addEventListener('touchmove', handleTouchMove, false);
+      canvas.addEventListener('touchforcechange', handleTouchForceChange, false);
+      canvas.addEventListener('webkitmouseforcechange', handleTouchForceChange, false);
+//      document.addEventListener('touchstart', handleTouchStart, false);
+//      document.addEventListener('touchmove', handleTouchMove, false);
       }
 
+    function  hanldeTouchForceChange(touchEvent) {
+      var touch = touchEvent.touches[0];
+      var f = touch.webkitForce;
+      output.innerText = "Force: "+f;
+      }
+
+
     function handleTouchStart(touchEvent) {
-      output.innerText += "START ";
+      touchEvent.preventDefault();
+      var touch = touchEvent.touches[0];
+      var clientRectangle = touchEvent.target.getBoundingClientRect();
+      var x = touch.clientX - clientRectangle.left;
+      var y = touch.clientY - clientRectangle.top;
+      var f = 10*touch.force;
+      //output.innerText = "Force: "+f;
+      // output.innerText += "S"+x+";"+y;
+      context.fillStyle = "red";
+      context.fillRect(x - f, y - f, 2*f + 1, 2*f + 1);
       }
 
     function handleTouchMove(touchEvent) {
-      output.innerText += "MOVE ";
+      touchEvent.preventDefault();
+      var touch = touchEvent.touches[0];
+      var clientRectangle = touchEvent.target.getBoundingClientRect();
+      var x = touch.clientX - clientRectangle.left;
+      var y = touch.clientY - clientRectangle.top;
+      var f = 10*touch.force;
+      //output.innerText = "Force: "+f;
+      //output.innerText += "M";
+      context.fillStyle = "green";
+      context.fillRect(x - f, y - f, 2*f + 1, 2*f + 1);
       }
   </script>
 </head>
