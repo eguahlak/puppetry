@@ -52,7 +52,7 @@ update_ msg model =
                 SelectionDone ->
                     if sel.dist < 20
                     then { model | isOn = not model.isOn, selection = Nothing}
-                    else if sel.dist > 120
+                    else if sel.dist > 140
                     then { model | selection = Nothing}
                     else { model | color = colorFromSelection sel, selection = Nothing}
                 SelectionStart name ->
@@ -99,7 +99,9 @@ view current =
   let color = toRgb current.color
   in g [ transform ("translate("
              ++ toString current.position.x ++ ","
-             ++ toString current.position.y ++ ")")]
+             ++ toString current.position.y ++ ")")
+       , onMouseDown (SelectionStart current.name)
+       ]
       ((case current.selection of
            Just sel ->
             let csel = selectionFromColor current.color
@@ -108,15 +110,19 @@ view current =
       ) ++
        [ circle
         [ r "20"
-        , onMouseDown (SelectionStart current.name)
         , strokeWidth "2px"
         , stroke "black"
         , fill (if (current.isOn) then (colorToCss color) else "black")
         ] []
        , circle
         [ r "7"
-        , onMouseDown (SelectionStart current.name)
-        , fill (colorToCss color)
+        , fill (case current.selection of
+             Just sel ->
+                if sel.dist < 140
+                then colorFromSelection sel |> toRgb |> colorToCss
+                else (colorToCss color)
+             Nothing -> (colorToCss color)
+          )
         ] []
        ]
       )

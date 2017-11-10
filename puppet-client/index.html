@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+        <link rel="stylesheet"
+              href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 
         <!-- android -->
         <meta name="mobile-web-app-capable" content="yes">
@@ -9,10 +10,18 @@
         <meta name="apple-mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-status-bar-style" content="translucent-black">
         <meta name="apple-mobile-web-app-title" content="Ei Blot Til Lyst">
+        <meta name="viewport"
+              content="width=device-width,height=device-height,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+
         <style>
-         .jumbotron {
-             background-color: #e6ffe6;
+         body {
+             background-color: #535760;
+         }
+         #message {
              text-align: center;
+             color: #90939A;
+             font-family: verdana;
+             font-size: 16px;
          }
         </style>
     </head>
@@ -20,7 +29,7 @@
     <body>
         <div id="elm-code-is-loaded-here"></div>
 
-        <script src="elm.js"></script>
+        <script src="elm.js?date=1"></script>
         <script>
          Elm.Main.embed(document.getElementById("elm-code-is-loaded-here"));
         </script>
