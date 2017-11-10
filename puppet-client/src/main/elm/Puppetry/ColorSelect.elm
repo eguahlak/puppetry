@@ -110,7 +110,7 @@ view current =
       ) ++
        [ circle
         [ r "20"
-        , strokeWidth "2px"
+        , strokeWidth "2"
         , stroke "black"
         , fill (if (current.isOn) then (colorToCss color) else "black")
         ] []
@@ -128,7 +128,7 @@ view current =
       )
 
 toPx : Float -> String
-toPx n = (toString n) ++ "px"
+toPx n = (toString n)
 
 drawSelection : Float -> Selection -> List (Svg Msg)
 drawSelection n sel =

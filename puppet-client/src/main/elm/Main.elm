@@ -5,7 +5,7 @@ import Html.Attributes as HtmlA
 import Task
 import Svg exposing (..)
 import Window
-import Svg.Attributes exposing (..)
+import Svg.Attributes as SvgA
 --import Svg.Events exposing (..)
 import Mouse exposing (position, Position, moves)
 -- import Html exposing (Html)
@@ -45,7 +45,11 @@ init =
           ]
        , message = "Hello, world!"
        }
-    , Task.attempt (Resize << Result.withDefault (Window.Size 400 400)) (Window.size)
+    , Task.attempt
+           (Resize
+                << Result.withDefault (Window.Size 400 400)
+           )
+           (Window.size)
     )
 
 update
@@ -56,14 +60,28 @@ update msg model =
     let x = case msg of
         ColorEvent e ->
             { model
-                | colors = List.map (ColorSelect.update_ e) model.colors
-                , message = (toString e)
+                | colors =
+                    List.map
+                      (ColorSelect.update_ <| scaleMsg model e)
+                       model.colors
+                , message = (toString <| scaleMsg model e)
             }
         Resize e ->
             { model | windowSize = e, message = "Resized to: " ++ (toString e) }
         SetMessage m ->
             { model | message = m }
     in ( x , Cmd.none )
+
+
+scaleMsg : Model -> ColorSelect.Msg -> ColorSelect.Msg
+scaleMsg m msg =
+    case msg of
+        ColorSelect.Move p ->
+            ColorSelect.Move
+              { x = (p.x - ((width m - (400 * scale m))/2)) / scale m
+              , y = p.y / scale m
+              }
+        a -> a
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -79,22 +97,29 @@ subscriptions model =
         , Window.resizes (Resize)
         ]
 
+
+scale : Model -> Float
+scale m =
+  Basics.min (width m / 400) (height m / 400)
+
+height : Model -> Float
+height m = toFloat m.windowSize.height - 40
+
+width : Model -> Float
+width m = toFloat m.windowSize.width
+
 testView : Model -> Html Msg
 testView model =
-    let scale =
-            Basics.min
-                (toFloat model.windowSize.width / 400)
-                ((toFloat model.windowSize.height - 40) / 400)
-    in div
-    []
-    [ svg
-      [ width (toString (400 * scale))
-      , height (toString <| model.windowSize.height - 40)
-      , HtmlA.style [("display", "block"), ("margin", "auto")]
+    div
+      []
+      [ svg
+        [ SvgA.width (toString (400 * scale model))
+        , SvgA.height (toString (400 * scale model))
+        , HtmlA.style [("display", "block"), ("margin", "auto")]
+        ]
+        [ Svg.map ColorEvent <| g
+          [ SvgA.transform ("scale(" ++ toString (scale model) ++ ")") ]
+          (List.map (ColorSelect.view) model.colors)
+        ]
+      , div [ HtmlA.id "message"] [ Html.text <| model.message ]
       ]
-      [ Svg.map ColorEvent <| g
-        [ transform ("scale(" ++ toString scale ++ ")") ]
-        (List.map (ColorSelect.view) model.colors)
-      ]
-    , div [ id "message"] [ Html.text <| model.message ]
-    ]
