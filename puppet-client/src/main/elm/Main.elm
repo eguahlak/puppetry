@@ -12,8 +12,8 @@ import Mouse exposing (position, Position, moves)
 import Puppetry.ColorSelect as ColorSelect
 import List
 
--- import Touch
--- import SingleTouch
+import Touch
+import SingleTouch
 
 type alias Model =
     { windowSize : Window.Size
@@ -111,7 +111,7 @@ width m = toFloat m.windowSize.width
 testView : Model -> Html Msg
 testView model =
     div
-      []
+      touchEvents
       [ svg
         [ SvgA.width (toString (400 * scale model))
         , SvgA.height (toString (400 * scale model))
@@ -123,3 +123,17 @@ testView model =
         ]
       , div [ HtmlA.id "message"] [ Html.text <| model.message ]
       ]
+
+
+posFromCoordinates : Touch.Coordinates -> ColorSelect.Position
+posFromCoordinates a =
+    let (x, y) = Touch.clientPos a in {x = x, y = y}
+
+touchEvents : List (Html.Attribute Msg)
+touchEvents =
+    [ SingleTouch.onStart
+          (\p ->  ColorEvent (ColorSelect.TrySelect <| posFromCoordinates p))
+    , SingleTouch.onMove
+          (\p ->  ColorEvent (ColorSelect.Move <| posFromCoordinates p))
+    , SingleTouch.onEnd ( \p -> ColorEvent (ColorSelect.SelectionDone))
+    ]

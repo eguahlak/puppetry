@@ -40,6 +40,7 @@ type Msg
   = Move Position
   | SelectionDone
   | SelectionStart String
+  | TrySelect Position
 
 
 update_ : Msg -> Model -> Model
@@ -55,13 +56,17 @@ update_ msg model =
                     else if sel.dist > 140
                     then { model | selection = Nothing}
                     else { model | color = colorFromSelection sel, selection = Nothing}
-                SelectionStart name ->
-                    model
+                _ -> model
         Nothing ->
             case msg of
                  SelectionStart name ->
                      if model.name == name
                      then { model | selection = Just ({dist = 0, angle = 0})}
+                     else model
+                 TrySelect pos ->
+                     let sel = (selectionFromPosition pos model)
+                     in if sel.dist < 40
+                     then { model | selection = Just sel }
                      else model
                  _ ->
                      model
