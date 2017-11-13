@@ -77,11 +77,18 @@ scaleMsg : Model -> ColorSelect.Msg -> ColorSelect.Msg
 scaleMsg m msg =
     case msg of
         ColorSelect.Move p ->
-            ColorSelect.Move
-              { x = (p.x - ((width m - (400 * scale m))/2)) / scale m
-              , y = p.y / scale m
-              }
-        a -> a
+            ColorSelect.Move (scalePos m p)
+        ColorSelect.SelectionStart p ->
+            ColorSelect.SelectionStart (scalePos m p)
+        a ->
+            a
+
+scalePos : Model -> ColorSelect.Position -> ColorSelect.Position
+scalePos m p =
+    { x = (p.x - ((width m - (400 * scale m))/2)) / scale m
+    , y = p.y / scale m
+    }
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -92,6 +99,11 @@ subscriptions model =
                   , y = toFloat pos.y}
                  )
             )
+        , Mouse.downs
+            (\pos -> ColorEvent <| ColorSelect.SelectionStart
+                 ({ x = toFloat pos.x
+                  , y = toFloat pos.y
+                  }))
         , Mouse.ups
             (\_ -> ColorEvent <| ColorSelect.SelectionDone )
         , Window.resizes (Resize)
@@ -132,7 +144,8 @@ posFromCoordinates a =
 touchEvents : List (Html.Attribute Msg)
 touchEvents =
     [ SingleTouch.onStart
-          (\p ->  ColorEvent (ColorSelect.TrySelect <| posFromCoordinates p))
+          (\p ->  ColorEvent
+               (ColorSelect.SelectionStart <| posFromCoordinates p))
     , SingleTouch.onMove
           (\p ->  ColorEvent (ColorSelect.Move <| posFromCoordinates p))
     , SingleTouch.onEnd ( \p -> ColorEvent (ColorSelect.SelectionDone))

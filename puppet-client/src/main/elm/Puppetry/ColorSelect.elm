@@ -5,7 +5,7 @@ import Color exposing (Color, rgb, toRgb, toHsl)
 -- import Json.Decode as Decode
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
-import Svg.Events exposing (..)
+--import Svg.Events exposing (..)
 -- import Mouse exposing (position, Position, moves)
 
 type alias Selection =
@@ -39,8 +39,7 @@ default name x y =
 type Msg
   = Move Position
   | SelectionDone
-  | SelectionStart String
-  | TrySelect Position
+  | SelectionStart Position
 
 
 update_ : Msg -> Model -> Model
@@ -55,17 +54,16 @@ update_ msg model =
                     then { model | isOn = not model.isOn, selection = Nothing}
                     else if sel.dist > 140
                     then { model | selection = Nothing}
-                    else { model | color = colorFromSelection sel, selection = Nothing}
+                    else { model
+                             | color = colorFromSelection sel
+                             , selection = Nothing
+                         }
                 _ -> model
         Nothing ->
             case msg of
-                 SelectionStart name ->
-                     if model.name == name
-                     then { model | selection = Just ({dist = 0, angle = 0})}
-                     else model
-                 TrySelect pos ->
+                 SelectionStart pos ->
                      let sel = (selectionFromPosition pos model)
-                     in if sel.dist < 40
+                     in if sel.dist < 20
                      then { model | selection = Just sel }
                      else model
                  _ ->
@@ -105,12 +103,16 @@ view current =
   in g [ transform ("translate("
              ++ toString current.position.x ++ ","
              ++ toString current.position.y ++ ")")
-       , onMouseDown (SelectionStart current.name)
        ]
       ((case current.selection of
            Just sel ->
-            let csel = selectionFromColor current.color
-            in (drawSelection 1 csel) ++ (drawSelection 5 sel)
+            (if sel.dist < 140 then (drawSelection 5 sel) else [])
+            ++
+            (if sel.dist > 20 then
+              let csel = selectionFromColor current.color
+                in (drawSelection 1 csel)
+             else [])
+
            Nothing -> []
       ) ++
        [ circle
@@ -125,6 +127,8 @@ view current =
              Just sel ->
                 if sel.dist < 140
                 then colorFromSelection sel |> toRgb |> colorToCss
+                else if sel.dist > 20 && not current.isOn
+                     then "black"
                 else (colorToCss color)
              Nothing -> (colorToCss color)
           )
