@@ -1,12 +1,8 @@
 module Puppetry.ColorSelect exposing (..)
 
 import Color exposing (Color, rgb, toRgb, toHsl)
--- import Html exposing (Html)
--- import Json.Decode as Decode
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
-import Svg.Events exposing (..)
--- import Mouse exposing (position, Position, moves)
 
 type alias Selection =
   { dist : Float
@@ -22,9 +18,15 @@ type alias Model =
   }
 
 type alias Position =
-    { x : Float
-    , y : Float
-    }
+  { x : Float
+  , y : Float
+  }
+
+buttonSize : Float
+buttonSize = 20
+
+buttonReach : Float
+buttonReach = 100
 
 
 default : String -> Float -> Float -> Model
@@ -39,53 +41,73 @@ default name x y =
 type Msg
   = Move Position
   | SelectionDone
-  | SelectionStart String
+  | SelectionStart Position
 
 
 update_ : Msg -> Model -> Model
 update_ msg model =
-    case model.selection of
-        Just sel ->
-            case msg of
-                Move pos ->
-                    { model | selection = Just (selectionFromPosition pos model)}
-                SelectionDone ->
-                    if sel.dist < 20
-                    then { model | isOn = not model.isOn, selection = Nothing}
-                    else if sel.dist > 120
-                    then { model | selection = Nothing}
-                    else { model | color = colorFromSelection sel, selection = Nothing}
-                SelectionStart name ->
-                    model
-        Nothing ->
-            case msg of
-                 SelectionStart name ->
-                     if model.name == name
-                     then { model | selection = Just ({dist = 0, angle = 0})}
-                     else model
-                 _ ->
-                     model
-
+  case model.selection of
+    Just sel ->
+      case msg of
+        Move pos ->
+          { model
+            | selection = Just (selectionFromPosition pos model)
+          }
+        SelectionDone ->
+          case readSelection sel of
+            Abort ->
+              { model
+                | selection = Nothing
+              }
+            Switch ->
+              { model
+                | isOn = not model.isOn
+                , selection = Nothing
+              }
+            SetColor col ->
+              { model
+                | color = col
+                , selection = Nothing
+              }
+        _ -> model
+    Nothing ->
+      case msg of
+        SelectionStart pos ->
+          let sel = (selectionFromPosition pos model)
+          in if sel.dist < buttonSize then
+            { model | selection = Just sel }
+          else model
+        _ ->
+          model
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model = (update_ msg model, Cmd.none)
 
 selectionFromPosition : Position -> Model -> Selection
 selectionFromPosition pos model =
-    let vect =
-            { x = pos.y - model.position.y
-            , y = pos.x - model.position.x
-            }
-    in
-        { angle = atan2 vect.x vect.y
-        , dist = sqrt (vect.x^2 + vect.y^2)
-        }
+    let x = pos.y - model.position.y
+        y = pos.x - model.position.x
+    in { angle = atan2 x y
+       , dist = sqrt (x^2 + y^2)
+       }
 
+type Action
+    = SetColor Color
+    | Switch
+    | Abort
 
-colorFromSelection : Selection -> Color
-colorFromSelection sel =
-    let clp = ((clamp 20 120 sel.dist) - 20) / 100
-    in Color.hsl (radians sel.angle) 1 clp
+readSelection : Selection -> Action
+readSelection sel =
+    if sel.dist < buttonSize then
+      Switch
+    else if sel.dist > buttonReach + buttonSize then
+      Abort
+    else
+      SetColor <| colorFromAD sel.angle sel.dist
+
+colorFromAD : Float -> Float -> Color
+colorFromAD angle distance =
+    Color.hsl angle 1 ((distance - buttonSize) / buttonReach)
 
 selectionFromColor : Color -> Selection
 selectionFromColor color =
@@ -95,53 +117,96 @@ selectionFromColor color =
 
 
 view : Model -> Svg Msg
-view current =
-  let color = toRgb current.color
-  in g [ transform ("translate("
-             ++ toString current.position.x ++ ","
-             ++ toString current.position.y ++ ")")]
-      ((case current.selection of
-           Just sel ->
-            let csel = selectionFromColor current.color
-            in (drawSelection 1 csel) ++ (drawSelection 5 sel)
-           Nothing -> []
-      ) ++
-       [ circle
-        [ r "20"
-        , onMouseDown (SelectionStart current.name)
-        , strokeWidth "2px"
+view m =
+  let
+    button =
+      [ circle
+        [ r (toString buttonSize)
+        , strokeWidth "2"
         , stroke "black"
-        , fill (if (current.isOn) then (colorToCss color) else "black")
+        , fill (if (m.isOn) then (colorToCss m.color) else "black")
         ] []
-       , circle
-        [ r "7"
-        , onMouseDown (SelectionStart current.name)
-        , fill (colorToCss color)
+      ]
+    indicator =
+      if not m.isOn then
+        [ circle
+          [ r (toString (buttonSize / 3))
+          , strokeWidth "2"
+          , stroke "black"
+          , fill (colorToCss m.color)
+          ] []
+        ]
+      else []
+  in g [ transform ("translate("
+             ++ toString m.position.x ++ ","
+             ++ toString m.position.y ++ ")")
+       ] <|
+       List.concat
+         [ case m.selection of
+             Just sel ->
+               viewSelection m sel
+             Nothing ->
+               []
+         , button
+         , indicator
+         ]
+
+viewSelection : Model -> Selection -> List (Svg msg)
+viewSelection m sel =
+  case readSelection sel of
+    Abort -> []
+    Switch ->
+      [ circle
+        [ r (toString (buttonSize * 1.50))
+        , strokeWidth "2"
+        , stroke "black"
+        , fill <| if m.isOn then "black" else (colorToCss m.color)
         ] []
-       ]
-      )
+      ]
+    SetColor c ->
+      let
+        choiceCircle =
+          [ circle
+            [ r (toString (buttonSize * 1.50))
+            , strokeWidth "2"
+            , stroke "black"
+            , fill (colorToCss c)
+            ] []
+          ]
+        colorCircle =
+          List.map
+            (\i ->
+              let f = (toFloat i - 0.5) / 12 * 2 * pi
+                  x1_ = toPx <| (cos f) * sel.dist
+                  y1_ = toPx <| (sin f) * sel.dist
+                  t = (toFloat i + 0.5) / 12 * 2 * pi
+                  x2_ = toPx <| (cos t) * sel.dist
+                  y2_ = toPx <| (sin t) * sel.dist
+                  color = Color.hsl f 1 ((sel.dist - buttonSize) / buttonReach)
+              in
+              Svg.path
+                   [ d <| "M " ++ x1_ ++ " " ++ y1_
+                       ++ "A " ++ (toPx sel.dist) ++ " " ++ (toPx sel.dist)
+                           ++ " 0 0 1 "
+                           ++ " " ++ x2_ ++ " " ++ y2_
+                   , stroke (colorToCss color)
+                   , strokeWidth "5"
+                   , fill "none"
+                   ] [ ]
+            )
+            (List.range 0 11)
+      in List.concat
+        [ choiceCircle
+        , colorCircle
+        ]
 
 toPx : Float -> String
-toPx n = (toString n) ++ "px"
+toPx n = (toString n)
 
-drawSelection : Float -> Selection -> List (Svg Msg)
-drawSelection n sel =
-  [ circle
-      [ stroke (colorFromSelection sel |> toRgb |> colorToCss)
-      , strokeWidth (toPx n)
-      , fill "none"
-      , r (toString sel.dist)
-      ] []
-  , line
-      [ stroke (colorFromSelection sel |> toRgb |> colorToCss)
-      , strokeWidth (toPx n)
-      , x2 (toPx ((cos sel.angle) * sel.dist))
-      , y2 (toPx ((sin sel.angle) * sel.dist))
-      ] []
-  ]
-
-colorToCss : { d | blue : a, green : b, red : c } -> String
+colorToCss : Color -> String
 colorToCss color =
-    "rgb(" ++ toString color.red ++ ","
-           ++ toString color.green ++ ","
-           ++ toString color.blue ++ ")"
+  let rgb = toRgb color
+  in   "rgb(" ++ toString rgb.red
+       ++ "," ++ toString rgb.green
+       ++ "," ++ toString rgb.blue
+       ++ ")"
