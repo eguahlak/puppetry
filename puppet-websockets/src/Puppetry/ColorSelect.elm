@@ -28,7 +28,6 @@ buttonSize = 20
 buttonReach : Float
 buttonReach = 100
 
--- coq idris
 
 default : String -> Float -> Float -> Model
 default name x y =
