@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+set -e
+
+# Copy over static files
+rsync -r static/ public
+
+# Make elm
+elm-make src/elm/Main.elm --output public/main.js
+
+# Make haskell
+stack build
+
+# Run server
+stack exec puppet-master $@

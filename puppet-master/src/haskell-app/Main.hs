@@ -20,14 +20,16 @@ import qualified Safe
 main :: IO ()
 main = do
   state <- Concurrent.newMVar []
-  Warp.run 3000 $ WS.websocketsOr
+  let port = 3000
+  putStrLn $ "Starting puppet-master at " ++ show port
+  Warp.run port $ WS.websocketsOr
     WS.defaultConnectionOptions
     (wsApp state)
     httpApp
 
 httpApp :: Wai.Application
 httpApp = 
-  WSS.staticApp (WSS.defaultFileServerSettings ".")  
+  WSS.staticApp (WSS.defaultFileServerSettings "public")  
 
 type ClientId = Int
 type Client   = (ClientId, WS.Connection)
