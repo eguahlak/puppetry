@@ -20,6 +20,7 @@ executable haskelm
   build-depends:       base >= 4.7 && < 5
                      , text
                      , wai
+                     , wai-app-static
                      , wai-websockets
                      , warp
                      , websockets

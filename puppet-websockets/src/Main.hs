@@ -13,6 +13,7 @@ import qualified Network.HTTP.Types             as Http
 import qualified Network.Wai                    as Wai
 import qualified Network.Wai.Handler.Warp       as Warp
 import qualified Network.Wai.Handler.WebSockets as WS
+import qualified Network.Wai.Application.Static as WSS
 import qualified Network.WebSockets             as WS
 import qualified Safe
 
@@ -25,7 +26,8 @@ main = do
     httpApp
 
 httpApp :: Wai.Application
-httpApp _ respond = respond $ Wai.responseLBS Http.status400 [] "Not a websocket request"
+httpApp = 
+  WSS.staticApp (WSS.defaultFileServerSettings ".")  
 
 type ClientId = Int
 type Client   = (ClientId, WS.Connection)
