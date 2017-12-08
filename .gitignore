@@ -1,5 +1,7 @@
 # Created by https://www.gitignore.io/api/elm,node,macos,haskell
 
+puppet-master/build
+
 ### Elm ###
 # elm-package generated files
 elm-stuff
