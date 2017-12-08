@@ -8,15 +8,27 @@ category: Fun
 ghc-options: -Wall
 
 dependencies:
+  - aeson
   - base
+  - binary
+  - bytestring
+  - concurrent-extra
+  - free
+  - http-types
+  - monadplus
+  - mtl
+  - safe
+  - scotty
+  - serialport
   - text
+  - text
+  - unix
+  - vector
   - wai
   - wai-app-static
   - wai-websockets
   - warp
   - websockets
-  - http-types
-  - safe
 #  - scotty
 #  - blaze-html
 

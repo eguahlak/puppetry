@@ -21,15 +21,29 @@ library
       src/haskell-lib
   ghc-options: -Wall
   build-depends:
-      base
+      aeson
+    , base
+    , binary
+    , bytestring
+    , concurrent-extra
+    , free
+    , http-types
+    , monadplus
+    , mtl
+    , safe
+    , scotty
+    , serialport
     , text
+    , text
+    , unix
+    , vector
     , wai
     , wai-app-static
     , wai-websockets
     , warp
     , websockets
-    , http-types
-    , safe
+  exposed-modules:
+      Puppetry.Protocol
   default-language: Haskell2010
 
 executable puppet-master
@@ -38,14 +52,26 @@ executable puppet-master
       src/haskell-app
   ghc-options: -Wall
   build-depends:
-      base
+      aeson
+    , base
+    , binary
+    , bytestring
+    , concurrent-extra
+    , free
+    , http-types
+    , monadplus
+    , mtl
+    , safe
+    , scotty
+    , serialport
     , text
+    , text
+    , unix
+    , vector
     , wai
     , wai-app-static
     , wai-websockets
     , warp
     , websockets
-    , http-types
-    , safe
     , puppet-master
   default-language: Haskell2010
