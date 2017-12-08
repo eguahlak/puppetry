@@ -1,0 +1,31 @@
+name: puppet-master
+version: 0.2.0
+synopsis: A puppetry webserver 
+license: MIT
+github: eguahlak/puppetry
+category: Fun
+
+ghc-options: -Wall
+
+dependencies:
+  - base
+  - text
+  - wai
+  - wai-app-static
+  - wai-websockets
+  - warp
+  - websockets
+  - http-types
+  - safe
+#  - scotty
+#  - blaze-html
+
+library:
+  source-dirs: src/haskell-lib
+
+executables:
+  puppet-master:
+    main: Main.hs
+    source-dirs: src/haskell-app
+    dependencies:
+      - puppet-master
