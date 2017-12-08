@@ -9,7 +9,8 @@ import Svg.Attributes exposing (..)
 import WebSocket
 -- import Puppetry.ColorSelect as ColorSelect
 import Puppetry.ColorSelector as ColorSelector exposing (ColorSelection)
-import Puppetry.Lamp as Lamp exposing (lamp, lampColor)
+import Puppetry.Lamp as Lamp exposing (Lamp, lamp, lampColor)
+import Puppetry.Strip as Strip exposing (Strip, getLamp)
 import Array exposing (Array, fromList, get, set)
 
 main : Program Never Model Msg
@@ -22,12 +23,13 @@ main =
      }
 
 type alias Model =
-  { left: ColorSelection
-  , right: ColorSelection
-  , lamps: Array Lamp.Model
-  , selectedLamp: Lamp.Model
-  , text: String
-  , number: Int
+  { left : ColorSelection
+  , right : ColorSelection
+  , strip : Strip
+  , lamps : Array Lamp
+  , selectedLamp : Lamp
+  , text : String
+  , number : Int
   }
 
 type Msg
@@ -35,7 +37,7 @@ type Msg
   | Send
   | LeftChanged ColorSelection
   | RightChanged ColorSelection
-  | LampClicked Lamp.Model
+  | LampClicked Lamp
   | Dummy
 
 init : (Model, Cmd Msg)
@@ -45,6 +47,7 @@ init =
   in
     ( { left = ColorSelector.init (rgb 255 255 0)
       , right = ColorSelector.init (rgb 255 0 255)
+      , strip = Strip 26 []
       , lamps = fromList [lamp 0 0, sLamp, lamp 0 2]
       , selectedLamp = sLamp
       , number = 0
@@ -57,14 +60,16 @@ view : Model -> Html Msg
 view model =
   div []
     [ svg [ viewBox "0 0 1000 500", width "1000px" ]
+{-
        [ rect
           [ x "100"
           , y "100"
           , width "800"
           , height "10"
           , fill "#0000ff"
-          ] []
-       , lampView model 0
+          ] []  -}
+--       [ Strip.view { x1 = 100.0, y1 = 100.0, x2 = 900.0, y2 = 100.0, onLampClicked = LampClicked } model.strip
+       [ lampView model 0
        , lampView model 1
        , lampView model 2
        , ColorSelector.view { x = 200, y = 300, onChange = LeftChanged } model.left
@@ -80,7 +85,7 @@ view model =
 lampView : Model -> Int -> Svg Msg
 lampView model index =
   let
-    lx = (100 + 400*index)
+    lx = toFloat (100 + 400*index)
   in
     case (get index model.lamps) of
       Just lamp -> Lamp.view { x = lx, y = 105, onClick = LampClicked } lamp

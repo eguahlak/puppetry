@@ -12,30 +12,30 @@ import SingleTouch
 lampRadius : Float
 lampRadius = 10
 
-type alias Model =
+type alias Lamp =
   { selector : ColorSelection
   , rackIndex : Int
   , lampIndex : Int
   }
 
-lamp : Int -> Int -> Model
+lamp : Int -> Int -> Lamp
 lamp r l =
   { selector = ColorSelector.init black
   , rackIndex = r
   , lampIndex = l
   }
 
-lampColor : ColorSelection -> Model -> Model
+lampColor : ColorSelection -> Lamp -> Lamp
 lampColor cs model =
   { model | selector = cs }
-  
+
 type alias Config msg =
-  { x : Int
-  , y : Int
-  , onClick : Model -> msg
+  { x : Float
+  , y : Float
+  , onClick : Lamp -> msg
   }
 
-view : Config msg -> Model -> Svg msg
+view : Config msg -> Lamp -> Svg msg
 view config model =
   circle
     [ cx (toString config.x), cy (toString config.y), r (toString lampRadius)
@@ -45,6 +45,6 @@ view config model =
     , SingleTouch.onEnd (handleClick config model)
     ] []
 
-handleClick : Config msg -> Model -> Touch.Coordinates -> msg
+handleClick : Config msg -> Lamp -> Touch.Coordinates -> msg
 handleClick config model coordinates =
    config.onClick model
