@@ -25,7 +25,10 @@ type alias Model =
   { selector : ColorSelection
   , backSceneStrip : Strip
   , middleSceneStrip : Strip
+  , selectedStripCode : Maybe Char
+  , selectedLampIndex : Int
   , number : Int
+  , text : String
   }
 
 type Msg
@@ -40,7 +43,10 @@ init =
   ( { selector = ColorSelector.init (rgb 255 255 0)
     , backSceneStrip = Strip 'B' 26 [(activeLamp Color.red 3), (activeLamp Color.blue 20)] Nothing
     , middleSceneStrip = Strip 'M' 26 [(activeLamp Color.green 13)] Nothing
+    , selectedStripCode = Nothing
+    , selectedLampIndex = 0
     , number = 0
+    , text = "Debug info goes here"
     }
   , Cmd.none
   )
@@ -65,7 +71,7 @@ view model =
        --       [ p [] [ Html.text <| "Pokes: " ++ toString model.number ]
        --       , button [ onClick Send ] [ Html.text "Poke others" ]
        --       ]
-       --    , div [] [ Html.text model.text ]
+    , div [] [ Html.text model.text ]
     ]
 
 wsUrl : String
@@ -82,15 +88,25 @@ update msg model =
     Send ->
       model ! [ WebSocket.send wsUrl "poke" ]
     SelectionChanged colorModel ->
-      { model
-      | selector = colorModel
-      } ! []
-    LampClicked stripCode lamp ->
-      -- TODO: This is a hack i think (AK)
-      case stripCode of
-        'B' -> { model | selector = lamp.selector, backSceneStrip = Strip.setLamp model.backSceneStrip lamp } ! []
-        'M' -> { model | selector = lamp.selector, middleSceneStrip = Strip.setLamp model.middleSceneStrip lamp } ! []
+      -- TODO: I think this is a hack
+      case model.selectedStripCode of
+        Just 'B' ->
+          { model
+          | selector = colorModel
+          , backSceneStrip = Strip.setLamp model.backSceneStrip (Lamp colorModel model.selectedLampIndex)
+          } ! []
+        Just 'M' ->
+          { model
+          | selector = colorModel
+          , middleSceneStrip = Strip.setLamp model.middleSceneStrip (Lamp colorModel model.selectedLampIndex)
+          } ! []
         _ -> model ! []
+    LampClicked stripCode lamp ->
+      { model
+      | selector = lamp.selector
+      , selectedStripCode = Just stripCode
+      , selectedLampIndex = lamp.index
+      } ! []
     Dummy -> (model, Cmd.none)
 
 subscriptions : Model -> Sub Msg
