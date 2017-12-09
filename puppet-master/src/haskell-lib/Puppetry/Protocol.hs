@@ -34,14 +34,10 @@ module Puppetry.Protocol
   , nothing
   , noArrays
   , allArrays
-  , black
-  , cRed
-  , cBlue
-  , cGreen
   ) where
 
 import           Debug.Trace
-import           System.Posix.Unistd
+-- import           System.Posix.Unistd
 
 import           Data.Binary
 import           Data.Binary.Get
@@ -56,40 +52,21 @@ import           Data.Aeson                 (FromJSON (..), Object, Value (..),
 import           Data.String
 import qualified Data.Text                  as T
 import qualified Data.Vector                as V
-import           Numeric
+-- import           Numeric
 
 import           GHC.Generics               (Generic)
 import           GHC.Word                   ()
 
 import           Control.Monad
 import           Control.Monad.Free
-import           Control.Monad.Plus
+-- import           Control.Monad.Plus
 import           Control.Monad.IO.Class
 import           Control.Concurrent
 
 import           System.Hardware.Serialport
 
-data Color = Color
-  { fase  :: !Word8
-  , red   :: !Word8
-  , green :: !Word8
-  , blue  :: !Word8
-  } deriving (Show, Read, Generic)
+import           Puppetry.Color
 
-black = Color { red = 0, green = 0, blue = 0, fase = 0 }
-cRed = black { red = 255 }
-cGreen = black { green = 255 }
-cBlue = black { blue = 255 }
-
-instance Binary Color
-
-instance FromJSON Color where
-  parseJSON (String t) =
-    case readHex (T.unpack t) of
-      [(i, "")] ->
-        return $ decode (runPut (putWord32be i))
-      _ -> mzero
-  parseJSON _ = mzero
 
 data ArraySelect = ArraySelect
   { backlight  :: !Bool
