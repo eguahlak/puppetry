@@ -35,7 +35,7 @@ view config strip =
       , strokeWidth "3"
       , stroke "black"
       ] []
-    ] ++ (List.map (viewStripLamp config strip) (List.range 0 strip.lampCount)))
+    ] ++ (List.map (viewStripLamp config strip) (List.range 0 <| strip.lampCount - 1)))
 
 viewStripLamp : Config msg -> Strip -> Int -> Svg msg
 viewStripLamp config strip index =

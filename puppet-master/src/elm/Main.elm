@@ -23,10 +23,8 @@ main =
      }
 
 type alias Model =
-  { left : ColorSelection
-  , right : ColorSelection
+  { selector : ColorSelection
   , strip : Strip
-  , lamps : Array Lamp
   , selectedLamp : Lamp
   , text : String
   , number : Int
@@ -35,8 +33,7 @@ type alias Model =
 type Msg
   = Receive String
   | Send
-  | LeftChanged ColorSelection
-  | RightChanged ColorSelection
+  | SelectionChanged ColorSelection
   | LampClicked Lamp
   | Dummy
 
@@ -45,10 +42,8 @@ init =
   let
     sLamp = lamp 0 1
   in
-    ( { left = ColorSelector.init (rgb 255 255 0)
-      , right = ColorSelector.init (rgb 255 0 255)
+    ( { selector = ColorSelector.init (rgb 255 255 0)
       , strip = Strip 26 []
-      , lamps = fromList [lamp 0 0, sLamp, lamp 0 2]
       , selectedLamp = sLamp
       , number = 0
       , text = "Position goes here"
@@ -59,21 +54,13 @@ init =
 view : Model -> Html Msg
 view model =
   div []
-    [ svg [ viewBox "0 0 1000 500", width "1000px" ]
-{-
-       [ rect
-          [ x "100"
-          , y "100"
-          , width "800"
-          , height "10"
-          , fill "#0000ff"
-          ] []  -}
---       [ Strip.view { x1 = 100.0, y1 = 100.0, x2 = 900.0, y2 = 100.0, onLampClicked = LampClicked } model.strip
-       [ lampView model 0
-       , lampView model 1
-       , lampView model 2
-       , ColorSelector.view { x = 200, y = 300, onChange = LeftChanged } model.left
-       , ColorSelector.view { x = 800, y = 300, onChange = RightChanged } model.right
+    [ svg [ viewBox "0 0 1000 700", width "1000px" ]
+       [ Strip.view
+          { x1 = 100.0, y1 = 100.0
+          , x2 = 900.0, y2 = 100.0
+          , onLampClick = LampClicked
+          } model.strip
+       , ColorSelector.view { x = 500, y = 450, onChange = SelectionChanged } model.selector
        ]
     , div []
        [ p [] [ Html.text <| "Pokes: " ++ toString model.number ]
@@ -82,14 +69,14 @@ view model =
     , div [] [ Html.text model.text ]
     ]
 
-lampView : Model -> Int -> Svg Msg
-lampView model index =
-  let
-    lx = toFloat (100 + 400*index)
-  in
-    case (get index model.lamps) of
-      Just lamp -> Lamp.view { x = lx, y = 105, onClick = LampClicked } lamp
-      Nothing -> rect [ x (toString (lx - 3)), y "102", width "6", height "6", fill "red"] []
+-- lampView : Model -> Int -> Svg Msg
+-- lampView model index =
+--   let
+--     lx = toFloat (100 + 400*index)
+--   in
+--     case (get index model.lamps) of
+--       Just lamp -> Lamp.view { x = lx, y = 105, onClick = LampClicked } lamp
+--       Nothing -> rect [ x (toString (lx - 3)), y "102", width "6", height "6", fill "red"] []
 
 wsUrl : String
 wsUrl = "ws://localhost:3000"
@@ -103,17 +90,15 @@ update msg model =
       model ! []
     Send ->
       model ! [ WebSocket.send wsUrl "poke" ]
-    LeftChanged colorModel ->
+    SelectionChanged colorModel ->
       { model
-      | left = colorModel
-      , lamps = (Array.set model.selectedLamp.lampIndex (lampColor colorModel model.selectedLamp) model.lamps)
+      | selector = colorModel
+      -- , lamps = (Array.set model.selectedLamp.lampIndex (lampColor colorModel model.selectedLamp) model.lamps)
       , text = (ColorSelector.toText colorModel.state)
       } ! []
-    RightChanged colorModel ->
-      { model | right = colorModel, text = (ColorSelector.toText colorModel.state) } ! []
     LampClicked lampModel ->
       { model
-      | left = lampModel.selector
+      | selector = lampModel.selector
       , selectedLamp = lampModel
       , text = ("Lamp #"++(toString lampModel.lampIndex)++" clicked")
       } ! []
