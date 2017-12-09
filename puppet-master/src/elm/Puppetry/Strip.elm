@@ -4,6 +4,7 @@ import Svg exposing (..)
 import Svg.Attributes exposing (..)
 
 import Puppetry.Lamp as Lamp exposing (Lamp)
+import Puppetry.ColorSelector as Selector
 
 -- MODEL
 
@@ -14,7 +15,44 @@ type alias Strip =
 
 getLamp : Strip -> Int -> Lamp
 getLamp strip index =
-  Lamp.lamp 0 index
+  getOrCreateLamp (Lamp.lamp -1) strip.activeLamps index
+
+getOrCreateLamp : Lamp -> List Lamp -> Int -> Lamp
+getOrCreateLamp lastLamp lamps index =
+  case lamps of
+    [] -> Lamp.passiveLamp lastLamp.selector.color index
+    activeLamp :: remainingActiveLamps ->
+      if index > activeLamp.index then
+        getOrCreateLamp activeLamp remainingActiveLamps index
+      else if index == activeLamp.index then activeLamp
+      else if (Lamp.active lastLamp) then
+        Lamp.interpolate lastLamp activeLamp index
+      else
+        Lamp (Selector.ColorSelection activeLamp.selector.color False Selector.Passive) index
+
+setLamp : Strip -> Lamp -> Strip
+setLamp strip lamp =
+  if (Lamp.active lamp) then { strip | activeLamps = (setActiveLamp strip.activeLamps lamp) }
+  else { strip | activeLamps = (setPassiveLamp strip.activeLamps lamp) }
+
+setActiveLamp : List Lamp -> Lamp -> List Lamp
+setActiveLamp lamps lamp =
+  case lamps of
+    [] -> [lamp]
+    activeLamp :: remainingActiveLamps ->
+      if lamp.index < activeLamp.index then lamp :: activeLamp :: remainingActiveLamps
+      else if lamp.index == activeLamp.index then lamps
+      else activeLamp :: (setActiveLamp remainingActiveLamps lamp)
+
+setPassiveLamp : List Lamp -> Lamp -> List Lamp
+setPassiveLamp lamps lamp =
+  case lamps of
+    [] -> lamps
+    activeLamp :: remainingActiveLamps ->
+      if activeLamp.index == lamp.index then remainingActiveLamps
+      else activeLamp :: (setPassiveLamp remainingActiveLamps lamp)
+
+
 
 type alias Config msg =
   { x1 : Float, y1 : Float

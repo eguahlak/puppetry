@@ -14,15 +14,25 @@ lampRadius = 10
 
 type alias Lamp =
   { selector : ColorSelection
-  , rackIndex : Int
-  , lampIndex : Int
+  , index : Int
   }
 
-lamp : Int -> Int -> Lamp
-lamp r l =
+lamp : Int -> Lamp
+lamp i =
   { selector = ColorSelector.init black
-  , rackIndex = r
-  , lampIndex = l
+  , index = i
+  }
+
+activeLamp : Color -> Int -> Lamp
+activeLamp color index =
+  { selector = (ColorSelection color True ColorSelector.Passive)
+  , index = index
+  }
+
+passiveLamp : Color -> Int -> Lamp
+passiveLamp color index =
+  { selector = (ColorSelection color False ColorSelector.Passive)
+  , index = index
   }
 
 lampColor : ColorSelection -> Lamp -> Lamp
@@ -35,12 +45,30 @@ type alias Config msg =
   , onClick : Lamp -> msg
   }
 
+active : Lamp -> Bool
+active lamp =
+  lamp.selector.active
+
+interpolate : Lamp -> Lamp -> Int -> Lamp
+interpolate start end index =
+  let
+    startRgb = toRgb start.selector.color
+    endRgb = toRgb end.selector.color
+    length = end.index - start.index
+    di = index - start.index
+    dr = (endRgb.red - startRgb.red)//length
+    dg = (endRgb.green - startRgb.green)//length
+    db = (endRgb.blue - startRgb.blue)//length
+    color = rgb (startRgb.red + di*dr) (startRgb.green + di*dg) (startRgb.blue + di*db)
+  in
+    Lamp (ColorSelector.init color) index
+
 view : Config msg -> Lamp -> Svg msg
 view config model =
   circle
     [ cx (toString config.x), cy (toString config.y), r (toString lampRadius)
     , strokeWidth "1"
-    , stroke "blue"
+    , stroke (if model.selector.active then "red" else "blue")
     , fill (colorToCss model.selector.color)
     , SingleTouch.onEnd (handleClick config model)
     ] []

@@ -17,3 +17,5 @@ colorToCss color =
        ++ "," ++ toString rgb.green
        ++ "," ++ toString rgb.blue
        ++ ")"
+
+    

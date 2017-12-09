@@ -40,10 +40,10 @@ type Msg
 init : (Model, Cmd Msg)
 init =
   let
-    sLamp = lamp 0 1
+    sLamp = lamp 0
   in
     ( { selector = ColorSelector.init (rgb 255 255 0)
-      , strip = Strip 26 []
+      , strip = Strip 26 [(Lamp.activeLamp Color.red 3), (Lamp.activeLamp Color.blue 20)]
       , selectedLamp = sLamp
       , number = 0
       , text = "Position goes here"
@@ -100,7 +100,7 @@ update msg model =
       { model
       | selector = lampModel.selector
       , selectedLamp = lampModel
-      , text = ("Lamp #"++(toString lampModel.lampIndex)++" clicked")
+      , text = ("Lamp #"++(toString lampModel.index)++" clicked")
       } ! []
     Dummy -> (model, Cmd.none)
 
