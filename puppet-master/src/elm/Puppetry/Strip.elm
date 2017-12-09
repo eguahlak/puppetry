@@ -9,8 +9,10 @@ import Puppetry.ColorSelector as Selector
 -- MODEL
 
 type alias Strip =
-  { lampCount : Int
+  { code : Char
+  , lampCount : Int
   , activeLamps : List Lamp
+  , selectedIndex : Maybe Int
   }
 
 getLamp : Strip -> Int -> Lamp
@@ -52,12 +54,10 @@ setPassiveLamp lamps lamp =
       if activeLamp.index == lamp.index then remainingActiveLamps
       else activeLamp :: (setPassiveLamp remainingActiveLamps lamp)
 
-
-
 type alias Config msg =
   { x1 : Float, y1 : Float
   , x2 : Float, y2 : Float
-  , onLampClick : Lamp -> msg
+  , onLampClick : Char -> Lamp -> msg
   }
 
 -- VIEW
@@ -84,4 +84,4 @@ viewStripLamp config strip index =
     lx = config.x1 + dw*(toFloat index)
     ly = config.y1 + dh*(toFloat index)
   in
-  Lamp.view { x = lx, y = ly, onClick = config.onLampClick } (getLamp strip index)
+  Lamp.view { x = lx, y = ly, onClick = config.onLampClick strip.code } (getLamp strip index)
