@@ -25,6 +25,9 @@ type alias Model =
   , backSceneStrip : Strip
   , middleSceneStrip : Strip
   , frontSceneStrip : Strip
+  , proSceneStrip : Strip
+  , leftStrip : Strip
+  , rightStrip : Strip
   , selectedStripCode : Maybe Char
   , selectedLampIndex : Int
   , number : Int
@@ -44,6 +47,9 @@ init =
     , backSceneStrip = Strip 'B' 26 [(activeLamp Color.red 3), (activeLamp Color.blue 20)] Nothing
     , middleSceneStrip = Strip 'M' 26 [(activeLamp Color.green 13)] Nothing
     , frontSceneStrip = Strip 'F' 26 [] Nothing
+    , proSceneStrip = Strip 'P' 23 [] Nothing
+    , leftStrip = Strip 'L' 6 [] Nothing
+    , rightStrip = Strip 'R' 6 [] Nothing
     , selectedStripCode = Nothing
     , selectedLampIndex = 0
     , number = 0
@@ -71,7 +77,22 @@ view model =
            , x2 = 900.0, y2 = 200.0
            , onLampClick = LampClicked
            } model.backSceneStrip
-       , ColorSelector.view { x = 500, y = 450, onChange = SelectionChanged } model.selector
+       , Strip.view
+           { x1 = 125.0, y1 = 650.0
+           , x2 = 875.0, y2 = 650.0
+           , onLampClick = LampClicked
+           } model.proSceneStrip
+       , Strip.view
+           { x1 = 75.0, y1 = 550.0
+           , x2 = 75.0, y2 = 350.0
+           , onLampClick = LampClicked
+           } model.leftStrip
+       , Strip.view
+           { x1 = 925.0, y1 = 550.0
+           , x2 = 925.0, y2 = 350.0
+           , onLampClick = LampClicked
+           } model.rightStrip
+       , ColorSelector.view { x = 500, y = 400, onChange = SelectionChanged } model.selector
        ]
        --    , div []
        --       [ p [] [ Html.text <| "Pokes: " ++ toString model.number ]
@@ -110,6 +131,21 @@ update msg model =
           { model
           | selector = colorModel
           , frontSceneStrip = Strip.setLamp model.frontSceneStrip (Lamp colorModel model.selectedLampIndex)
+          } ! []
+        Just 'P' ->
+          { model
+          | selector = colorModel
+          , proSceneStrip = Strip.setLamp model.proSceneStrip (Lamp colorModel model.selectedLampIndex)
+          } ! []
+        Just 'L' ->
+          { model
+          | selector = colorModel
+          , leftStrip = Strip.setLamp model.leftStrip (Lamp colorModel model.selectedLampIndex)
+          } ! []
+        Just 'R' ->
+          { model
+          | selector = colorModel
+          , rightStrip = Strip.setLamp model.rightStrip (Lamp colorModel model.selectedLampIndex)
           } ! []
         _ -> model ! []
     LampClicked stripCode lamp ->

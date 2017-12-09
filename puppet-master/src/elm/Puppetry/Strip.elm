@@ -79,7 +79,7 @@ viewStripLamp : Config msg -> Strip -> Int -> Svg msg
 viewStripLamp config strip index =
   let
     dw = (config.x2 - config.x1)/(toFloat strip.lampCount - 1.0)
-    dh = (config.y2 - config.y2)/(toFloat strip.lampCount - 1.0)
+    dh = (config.y2 - config.y1)/(toFloat strip.lampCount - 1.0)
     stripLenght = toFloat (strip.lampCount - 1)
     lx = config.x1 + dw*(toFloat index)
     ly = config.y1 + dh*(toFloat index)
