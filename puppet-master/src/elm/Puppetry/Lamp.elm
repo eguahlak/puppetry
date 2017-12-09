@@ -65,13 +65,24 @@ interpolate start end index =
 
 view : Config msg -> Lamp -> Svg msg
 view config model =
-  circle
-    [ cx (toString config.x), cy (toString config.y), r (toString lampRadius)
-    , strokeWidth "1"
-    , stroke (if model.selector.active then "red" else "blue")
-    , fill (colorToCss model.selector.color)
-    , SingleTouch.onEnd (handleClick config model)
-    ] []
+  let
+    (size, opacity, orbit) =
+      if model.selector.active then (1.8, 0.8, "white")
+      else (1.4, 0.5, "black")
+  in
+    g [ SingleTouch.onEnd (handleClick config model) ]
+      [ circle
+        [ cx (toString config.x), cy (toString config.y), r (toString (size*lampRadius))
+        , fill (colorToCss model.selector.color)
+        , fillOpacity (toString opacity)
+        ] []
+      , circle
+        [ cx (toString config.x), cy (toString config.y), r (toString lampRadius)
+        , strokeWidth "1"
+        , stroke orbit
+        , fill (colorToCss model.selector.color)
+        ] []
+      ]
 
 handleClick : Config msg -> Lamp -> Touch.Coordinates -> msg
 handleClick config model coordinates =
