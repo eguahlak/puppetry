@@ -3,7 +3,6 @@ module Main exposing (main)
 -- import Html.App    as App
 import Color exposing (rgb)
 import Html        exposing (..)
-import Html.Events exposing (..)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import WebSocket
@@ -25,6 +24,7 @@ type alias Model =
   { selector : ColorSelection
   , backSceneStrip : Strip
   , middleSceneStrip : Strip
+  , frontSceneStrip : Strip
   , selectedStripCode : Maybe Char
   , selectedLampIndex : Int
   , number : Int
@@ -43,6 +43,7 @@ init =
   ( { selector = ColorSelector.init (rgb 255 255 0)
     , backSceneStrip = Strip 'B' 26 [(activeLamp Color.red 3), (activeLamp Color.blue 20)] Nothing
     , middleSceneStrip = Strip 'M' 26 [(activeLamp Color.green 13)] Nothing
+    , frontSceneStrip = Strip 'F' 26 [] Nothing
     , selectedStripCode = Nothing
     , selectedLampIndex = 0
     , number = 0
@@ -56,6 +57,11 @@ view model =
   div []
     [ svg [ viewBox "0 0 1000 700", width "1000px" ]
        [ Strip.view
+           { x1 = 50.0, y1 = 100.0
+           , x2 = 950.0, y2 = 100.0
+           , onLampClick = LampClicked
+           } model.frontSceneStrip
+       , Strip.view
            { x1 = 75.0, y1 = 150.0
            , x2 = 925.0, y2 = 150.0
            , onLampClick = LampClicked
@@ -99,6 +105,11 @@ update msg model =
           { model
           | selector = colorModel
           , middleSceneStrip = Strip.setLamp model.middleSceneStrip (Lamp colorModel model.selectedLampIndex)
+          } ! []
+        Just 'F' ->
+          { model
+          | selector = colorModel
+          , frontSceneStrip = Strip.setLamp model.frontSceneStrip (Lamp colorModel model.selectedLampIndex)
           } ! []
         _ -> model ! []
     LampClicked stripCode lamp ->
