@@ -2,7 +2,8 @@ module Main exposing (main)
 
 -- import Html.App    as App
 import Color exposing (rgb)
-import Html        exposing (..)
+import Html exposing (..)
+import Html.Events exposing (onClick)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import WebSocket
@@ -44,8 +45,8 @@ type Msg
 init : (Model, Cmd Msg)
 init =
   ( { selector = ColorSelector.init (rgb 255 255 0)
-    , backSceneStrip = Strip 'B' 26 [(activeLamp Color.red 3), (activeLamp Color.blue 20)] Nothing
-    , middleSceneStrip = Strip 'M' 26 [(activeLamp Color.green 13)] Nothing
+    , backSceneStrip = Strip 'B' 26 [] Nothing
+    , middleSceneStrip = Strip 'M' 26 [] Nothing
     , frontSceneStrip = Strip 'F' 26 [] Nothing
     , proSceneStrip = Strip 'P' 23 [] Nothing
     , leftStrip = Strip 'L' 6 [] Nothing
@@ -94,16 +95,16 @@ view model =
            } model.rightStrip
        , ColorSelector.view { x = 500, y = 400, onChange = SelectionChanged } model.selector
        ]
-       --    , div []
-       --       [ p [] [ Html.text <| "Pokes: " ++ toString model.number ]
-       --       , button [ onClick Send ] [ Html.text "Poke others" ]
-       --       ]
+    , div []
+       [ p [] [ Html.text <| "Pokes: " ++ toString model.number ]
+       , button [ onClick Send ] [ Html.text "Poke others" ]
+       ]
     , div [] [ Html.text model.text ]
     ]
 
 wsUrl : String
--- wsUrl = "ws://localhost:3000"
-wsUrl = ""
+wsUrl = "ws://192.168.1.26:3000"
+-- wsUrl = "ws://~:3000"
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =

@@ -61,7 +61,6 @@ view config model =
     List.concat
       [ [ circle
           [ r "150"
-          -- , fill "#eeeeee"
           , fillOpacity "0"
           ] [] ]
       , viewSelection model
