@@ -119,13 +119,16 @@ connectClient conn =
   atomic $ do
     client <- addClient conn
     st <- use lights
+    liftIO $ putStrLn $ "Received new client: " ++ show (client ^. _1)
     liftIO $ send st client
+    clients <- use clientList
+    liftIO $ putStrLn $ "Client list is: " ++ show (map (^. _1) clients)
     return client
 
 addClient :: WS.Connection -> Puppetry Client
 addClient conn = do
   Max clientId <- (Max 0 <>) <$> (use $ clientList . traverse . _1 . to Max)
-  let client = (clientId, conn)
+  let client = (clientId + 1, conn)
   clientList %= (client:)
   return client
 
