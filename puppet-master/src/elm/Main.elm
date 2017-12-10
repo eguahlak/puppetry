@@ -162,15 +162,17 @@ update msg model =
       -- DONE: Fixed it ;-)
       case model.selectedStripCode of
         Just c ->
-          { model
-          | selector = colorModel
-          , lights = updateStrip c (\ s ->
+         let lights = updateStrip c (\ s ->
               if colorModel.active then
                  Strip.setLamp s (Lamp colorModel.color model.selectedLampIndex)
               else
                  Strip.removeLamp s model.selectedLampIndex
                ) model.lights
-          } ! []
+          in
+          { model
+          | selector = colorModel
+          , lights = lights
+          } ! [ WebSocket.send model.wsUrl (JE.encode 0 (jsValue lights))]
         _ -> model ! []
     LampClicked stripCode lamp ->
       { model
