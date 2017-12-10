@@ -7,10 +7,18 @@ Contains the webserver and the client code.
 ### Protocol:
 
 ```
-{ "back" :
-    { "2": "ff8800" 
-    , "12": "00ff00" 
+{ "back":
+  { "2": 
+    { "red" : 123
+    , "blue" : 23
+    , "green" : 123
+    # , "phase" : 12 exists but is currently unused
     }
+  , "12": 
+    { "red" : 12 
+    # -- missing values are assumed 0
+    } 
+  }
 , "middle" : ...
 , "front" : ...
 , "left" : ...

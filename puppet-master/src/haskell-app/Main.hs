@@ -1,71 +1,139 @@
-{-# LANGUAGE OverloadedStrings   #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings     #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TemplateHaskell       #-}
+{-# LANGUAGE TypeSynonymInstances  #-}
 
 module Main where
 
 import qualified Control.Concurrent             as Concurrent
 import qualified Control.Exception              as Exception
+import           Control.Lens
 import qualified Control.Monad                  as Monad
+import           Control.Monad.Reader
+import           Control.Monad.State            (StateT, get, modify, put,
+                                                 runStateT)
 import qualified Data.List                      as List
-import qualified Data.Maybe                     as Maybe
-import qualified Data.Text                      as Text
-import qualified Network.HTTP.Types             as Http
+import           Data.Monoid
+import           Data.Semigroup                 hiding ((<>))
+
 import qualified Network.Wai                    as Wai
+import qualified Network.Wai.Application.Static as WSS
 import qualified Network.Wai.Handler.Warp       as Warp
 import qualified Network.Wai.Handler.WebSockets as WS
-import qualified Network.Wai.Application.Static as WSS
 import qualified Network.WebSockets             as WS
-import qualified Safe
+
+import           Data.Aeson                     (FromJSON, ToJSON, decode,
+                                                 encode)
+
+import           Puppetry.State
+
+type ClientId = Int
+type Client   = (ClientId, WS.Connection)
+
+type StateRef = Concurrent.MVar ServerState
+data ServerState = ServerState
+  { _clientList :: ![Client]
+  , _lights     :: !State
+  }
+
+makeLenses 'ServerState
+
+type PuppetServer = ReaderT StateRef IO
+type Puppetry = StateT ServerState IO
+
+-- | Execute an atomic access to the ServerState. Be aware, this is a
+-- locking action.
+atomic
+  :: Puppetry a
+  -> PuppetServer a
+atomic m = do
+  ref <- ask
+  liftIO . Concurrent.modifyMVar ref $ \ s -> do
+    (s, a) <- runStateT m s
+    return (a, s)
+
 
 main :: IO ()
 main = do
-  state <- Concurrent.newMVar []
+  stateRef <- Concurrent.newMVar (ServerState [] exampleState)
   let port = 3000
   putStrLn $ "Starting puppet-master at " ++ show port
   Warp.run port $ WS.websocketsOr
     WS.defaultConnectionOptions
-    (wsApp state)
+    (wsApp stateRef)
     httpApp
 
 httpApp :: Wai.Application
-httpApp = 
-  WSS.staticApp (WSS.defaultFileServerSettings "public")  
+httpApp =
+  WSS.staticApp (WSS.defaultFileServerSettings "public")
 
-type ClientId = Int
-type Client   = (ClientId, WS.Connection)
-type State    = [Client]
-
-nextId :: State -> ClientId
-nextId = Maybe.maybe 0 ((+) 1) . Safe.maximumMay . List.map fst
-
-connectClient :: WS.Connection -> Concurrent.MVar State -> IO ClientId
-connectClient conn stateRef = Concurrent.modifyMVar stateRef $ \state -> do
-  let clientId = nextId state
-  return ((clientId, conn) : state, clientId)
-
-withoutClient :: ClientId -> State -> State
-withoutClient clientId = List.filter ((/=) clientId . fst)
-
-disconnectClient :: ClientId -> Concurrent.MVar State -> IO ()
-disconnectClient clientId stateRef = Concurrent.modifyMVar_ stateRef $ \state ->
-  return $ withoutClient clientId state
-
-listen :: WS.Connection -> ClientId -> Concurrent.MVar State -> IO ()
-listen conn clientId stateRef = Monad.forever $ do
-  WS.receiveData conn >>= broadcast clientId stateRef
-
-broadcast :: ClientId -> Concurrent.MVar State -> Text.Text -> IO ()
-broadcast clientId stateRef msg = do
-  clients <- Concurrent.readMVar stateRef
-  let otherClients = withoutClient clientId clients
-  Monad.forM_ otherClients $ \(_, conn) ->
-    WS.sendTextData conn msg
-
-wsApp :: Concurrent.MVar State -> WS.ServerApp
+wsApp :: StateRef -> WS.ServerApp
 wsApp stateRef pendingConn = do
   conn <- WS.acceptRequest pendingConn
-  clientId <- connectClient conn stateRef
+  client <- runReaderT (connectClient conn) stateRef
   WS.forkPingThread conn 30
   Exception.finally
-    (listen conn clientId stateRef)
-    (disconnectClient clientId stateRef)
+    (runReaderT (listen client) stateRef)
+    (runReaderT (disconnectClient client) stateRef)
+
+-- | Listen on a client, if we receive a state from the client
+-- we update and broadcast.
+listen :: Client -> PuppetServer ()
+listen client =
+  Monad.forever $ do
+    msg <- liftIO $ recv client
+    case msg of
+      Just state -> do
+        -- Lock state until broadcast is completed
+        atomic $ do
+          lights .= state
+          clients <- use clientList
+          liftIO $ multisend state clients
+      Nothing ->
+        return ()
+
+-- | Receive data from the client
+recv :: FromJSON a => Client -> IO (Maybe a)
+recv (_, conn) =
+  decode <$> liftIO (WS.receiveData conn)
+
+-- | Broadcast the state to list clients.
+multisend :: ToJSON a => a -> [Client] -> IO ()
+multisend a clients = do
+  let txt = encode a
+  Monad.forM_ clients $ \(_, conn) ->
+    WS.sendTextData conn txt
+
+-- | Send an message to a single client
+send :: ToJSON a => a -> Client -> IO ()
+send a (_, conn) = do
+  let txt = encode a
+  WS.sendTextData conn txt
+
+-- | Connect a client, atomically add the client to the list
+-- and send out the current state.
+connectClient :: WS.Connection -> PuppetServer Client
+connectClient conn =
+  atomic $ do
+    client <- addClient conn
+    st <- use lights
+    liftIO $ send st client
+    return client
+
+addClient :: WS.Connection -> Puppetry Client
+addClient conn = do
+  Max clientId <- (Max 0 <>) <$> (use $ clientList . traverse . _1 . to Max)
+  let client = (clientId, conn)
+  clientList %= (client:)
+  return client
+
+-- | Disconnect the client
+disconnectClient :: Client -> PuppetServer ()
+disconnectClient client =
+  atomic $ clientList %= withoutClient client
+
+-- | Returns a list of clients without the client
+withoutClient :: Client -> [Client] -> [Client]
+withoutClient (clientId, _) = List.filter ((/=) clientId . fst)

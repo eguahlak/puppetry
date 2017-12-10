@@ -29,6 +29,7 @@ dependencies:
   - warp
   - websockets
   - containers
+  - lens
 #  - scotty
 #  - blaze-html
 

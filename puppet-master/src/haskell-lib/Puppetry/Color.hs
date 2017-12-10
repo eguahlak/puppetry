@@ -1,4 +1,5 @@
-{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 module Puppetry.Color
   ( Color (..)
@@ -8,20 +9,15 @@ module Puppetry.Color
   , cBlue
   ) where
 
-import GHC.Generics (Generic)
+import           GHC.Generics (Generic)
 
-import Data.Binary.Put
-import Data.Binary
-import Data.Aeson (parseJSON, FromJSON, Value(..), toJSON, ToJSON)
-
-import           Numeric (readHex, showHex)
-import           Control.Monad
-
-
-import qualified Data.Text as T
+import           Data.Aeson   (FromJSON, ToJSON, defaultOptions,
+                               genericToEncoding, parseJSON, toEncoding,
+                               withObject, (.!=), (.:?))
+import           Data.Binary  as B
 
 data Color = Color
-  { phase  :: !Word8
+  { phase :: !Word8
   , red   :: !Word8
   , green :: !Word8
   , blue  :: !Word8
@@ -42,15 +38,11 @@ cBlue = cBlack { blue = 255 }
 instance Binary Color
 
 instance FromJSON Color where
-  parseJSON (String t) =
-    case readHex (T.unpack t) of
-      [(i, "")] ->
-        return $ decode (runPut (putWord32be i))
-      _ -> mzero
-  parseJSON _ = mzero
+  parseJSON = withObject "Color" $ \v -> Color
+    <$> v .:? "phase" .!= 0
+    <*> v .:? "red" .!= 0
+    <*> v .:? "green" .!= 0
+    <*> v .:? "blue" .!= 0
 
 instance ToJSON Color where
-  toJSON c =
-   toJSON (showHex (red c) $ showHex (blue c) $ showHex (green c) $ "")
-
-    -- toEncoding = genericToEncoding defaultOptions
+  toEncoding = genericToEncoding defaultOptions

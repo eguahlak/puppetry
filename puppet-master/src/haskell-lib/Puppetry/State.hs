@@ -1,13 +1,13 @@
 {-# LANGUAGE DeriveGeneric #-}
 module Puppetry.State where
 
-import Puppetry.Color (Color)
+import Puppetry.Color (Color, cRed, cBlue, cGreen)
 
 import GHC.Generics (Generic)
 
 import Data.Aeson
 
-import Data.Map (Map)
+import Data.Map (Map, empty, fromList)
 
 -- | A single lamp
 data Lamp = Lamp
@@ -25,6 +25,21 @@ data State = State
   , right  :: Map Int Color
   , procenium :: Map Int Color
   } deriving (Show, Read, Generic)
+
+
+emptyState :: State
+emptyState =
+  State empty empty empty empty empty empty
+
+exampleState :: State
+exampleState =
+  emptyState
+  { middle = fromList [ (0, cRed) , (13, cBlue), (25, cGreen) ]
+  , front = fromList [ (0, cRed), (25, cBlue) ]
+  , right = fromList [ (3, cRed) ]
+  , left = fromList [ (2, cBlue) ]
+  , procenium = fromList [ (11, cGreen )]
+  }
 
 
 instance FromJSON State
