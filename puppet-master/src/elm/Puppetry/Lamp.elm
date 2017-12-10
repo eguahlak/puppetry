@@ -5,6 +5,7 @@ import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Puppetry.ColorSelector as ColorSelector exposing (ColorSelection)
 import Puppetry.Utilities exposing (..)
+import Json.Encode as JE
 
 import Touch
 import SingleTouch
@@ -16,6 +17,20 @@ type alias Lamp =
   { selector : ColorSelection
   , index : Int
   }
+
+jsValue : Lamp -> JE.Value
+jsValue lamp =
+  let
+    { red, green, blue } = toRgb lamp.selector.color
+  in
+    JE.object
+      [ ("lamp", JE.int lamp.index)
+      , ("color", JE.object
+        [ ("red", JE.int red)
+        , ("green", JE.int green)
+        , ("blue", JE.int blue)
+        ] )
+      ]
 
 lamp : Int -> Lamp
 lamp i =

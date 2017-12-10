@@ -2,7 +2,7 @@ module Puppetry.Strip exposing (..)
 
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
-
+import Json.Encode as JE
 import Puppetry.Lamp as Lamp exposing (Lamp)
 import Puppetry.ColorSelector as Selector
 
@@ -14,6 +14,10 @@ type alias Strip =
   , activeLamps : List Lamp
   , selectedIndex : Maybe Int
   }
+
+jsValue : Strip -> JE.Value
+jsValue strip =
+  JE.list (List.map Lamp.jsValue strip.activeLamps)
 
 getLamp : Strip -> Int -> Lamp
 getLamp strip index =

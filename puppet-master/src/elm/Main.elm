@@ -6,6 +6,7 @@ import Debug exposing (..)
 import Color exposing (Color, rgb)
 import Html exposing (..)
 import Json.Decode as JD exposing (Decoder, decodeString)
+import Json.Encode as JE
 import Html.Events exposing (onClick)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
@@ -48,6 +49,17 @@ type alias LightState =
   , rightStrip : Strip
   , proSceneStrip : Strip
   }
+
+jsValue : LightState -> JE.Value
+jsValue lights =
+  JE.object
+    [ ("back", Strip.jsValue lights.backSceneStrip)
+    , ("middle", Strip.jsValue lights.middleSceneStrip)
+    , ("front", Strip.jsValue lights.frontSceneStrip)
+    , ("left", Strip.jsValue lights.leftStrip)
+    , ("right", Strip.jsValue lights.rightStrip)
+    , ("proscenium", Strip.jsValue lights.proSceneStrip)
+    ]
 
 decodeLights : Decoder LightState
 decodeLights =
@@ -148,14 +160,12 @@ view model =
     ]
 
 wsUrl : String
-wsUrl = "ws://localhost:3000"
+wsUrl = "ws://192.168.1.26:3000"
 -- wsUrl = "ws://~:3000"
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    Receive "poke" ->
-      { model | number = model.number + 1}  ! []
     Receive json ->
       case decodeString decodeLights (log "received" json) of
         Ok lights ->
@@ -163,7 +173,7 @@ update msg model =
         Err msg ->
           { model | text = msg } ! []
     Send ->
-      model ! [ WebSocket.send wsUrl "poke" ]
+      model ! [ WebSocket.send wsUrl (JE.encode 0 (jsValue model.lights)) ]
     SelectionChanged colorModel ->
       -- TODO: I think this is a hack
       -- DONE: Fixed it ;-)

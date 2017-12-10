@@ -8,8 +8,8 @@ Contains the webserver and the client code.
 
 ```
 { "back":
-  [ { "lamp": 2: 
-    , "color": 
+  [ { "lamp": 2:
+    , "color":
         { "red" : 123
         , "blue" : 23
         , "green" : 123
@@ -17,16 +17,16 @@ Contains the webserver and the client code.
         }
   , { "lamp": 12
     , "color":
-        { "red" : 12 
+        { "red" : 12
         # -- missing values are assumed 0
-        } 
+        }
     }
   ]
 , "middle" : ...
 , "front" : ...
 , "left" : ...
 , "right" : ...
-, "procenium" : ...
+, "proscenium" : ...
 }
 ```
 
@@ -34,4 +34,3 @@ Contains the webserver and the client code.
 ## Puppet-lights
 
 Contains the arduino code, that manages the theater's lights.
-
