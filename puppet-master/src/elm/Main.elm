@@ -5,6 +5,7 @@ import Debug exposing (..)
 -- import Html.App    as App
 import Color exposing (Color, rgb)
 import Html exposing (..)
+import Navigation
 import Json.Decode as JD exposing (Decoder, decodeString)
 import Json.Encode as JE
 import Html.Events exposing (onClick)
@@ -13,12 +14,12 @@ import Svg.Attributes exposing (..)
 import WebSocket
 -- import Puppetry.ColorSelect as ColorSelect
 import Puppetry.ColorSelector as ColorSelector exposing (ColorSelection)
-import Puppetry.Lamp as Lamp exposing (Lamp, lamp, lampColor, activeLamp, passiveLamp)
-import Puppetry.Strip as Strip exposing (Strip, getLamp)
+import Puppetry.Lamp as Lamp exposing (Lamp)
+import Puppetry.Strip as Strip exposing (Strip)
 
 main : Program Never Model Msg
 main =
-  Html.program
+  Navigation.program (SetLocation)
      { init          = init
      , update        = update
      , view          = view
@@ -31,14 +32,16 @@ type alias Model =
   , selectedStripCode : Maybe Char
   , selectedLampIndex : Int
   , number : Int
+  , wsUrl : String
   , text : String
   }
 
 type Msg
   = Receive String
   | Send
+  | SetLocation Navigation.Location
   | SelectionChanged ColorSelection
-  | LampClicked Char Lamp
+  | LampClicked Char Lamp.StripLamp
   | Dummy
 
 type alias LightState =
@@ -64,91 +67,75 @@ jsValue lights =
 decodeLights : Decoder LightState
 decodeLights =
   JD.map6 LightState
-    (JD.field "back" (decodeStrip 'B' 26))
-    (JD.field "middle" (decodeStrip 'M' 26))
-    (JD.field "front" (decodeStrip 'F' 26))
-    (JD.field "left" (decodeStrip 'L' 6))
-    (JD.field "right" (decodeStrip 'R' 6))
-    (JD.field "proscenium" (decodeStrip 'P' 23))
+    (JD.field "back" (Strip.decode 'B' 26))
+    (JD.field "middle" (Strip.decode 'M' 26))
+    (JD.field "front" (Strip.decode 'F' 26))
+    (JD.field "left" (Strip.decode 'L' 6))
+    (JD.field "right" (Strip.decode 'R' 6))
+    (JD.field "proscenium" (Strip.decode 'P' 23))
 
-decodeStrip : Char -> Int -> Decoder Strip
-decodeStrip c m =
-  JD.map (\ l -> Strip c m l Nothing)
-    decodeLamps
-
-decodeLamps : Decoder (List Lamp)
-decodeLamps =
-  JD.list decodeLamp
-
-decodeLamp : Decoder Lamp
-decodeLamp =
-  JD.map2 (\a b -> { selector = a, index = b})
-    (JD.field "color" decodeColorSelection)
-    (JD.field "lamp" JD.int )
-
-decodeColorSelection : Decoder ColorSelection
-decodeColorSelection =
-  JD.map ColorSelector.init decodeColor
-
-decodeColor : Decoder Color
-decodeColor =
-  JD.map3 rgb
-    (JD.field "red" JD.int)
-    (JD.field "green" JD.int)
-    (JD.field "blue" JD.int)
-
-init : (Model, Cmd Msg)
-init =
+init : Navigation.Location -> (Model, Cmd Msg)
+init l =
   ( { selector = ColorSelector.init (rgb 255 255 0)
     , lights =
-      { backSceneStrip = Strip 'B' 26 [] Nothing
-      , middleSceneStrip = Strip 'M' 26 [] Nothing
-      , frontSceneStrip = Strip 'F' 26 [] Nothing
-      , proSceneStrip = Strip 'P' 23 [] Nothing
-      , leftStrip = Strip 'L' 6 [] Nothing
-      , rightStrip = Strip 'R' 6 [] Nothing
+      { backSceneStrip = Strip 'B' 26 []
+      , middleSceneStrip = Strip 'M' 26 []
+      , frontSceneStrip = Strip 'F' 26 []
+      , proSceneStrip = Strip 'P' 23 []
+      , leftStrip = Strip 'L' 6 []
+      , rightStrip = Strip 'R' 6 []
       }
     , selectedStripCode = Nothing
     , selectedLampIndex = 0
     , number = 0
-    , text = "Debug info goes here"
+    , wsUrl = "ws://" ++ l.host
+    , text = "Debug information here!"
     }
   , Cmd.none
   )
 
 view : Model -> Html Msg
 view model =
+  let sel c = model.selectedStripCode
+  |> Maybe.andThen (\cx -> if cx == c then Just model.selectedLampIndex else Nothing)
+  in
   div []
     [ svg [ viewBox "0 0 1000 700", width "1000px" ]
        [ Strip.view
            { x1 = 50.0, y1 = 100.0
            , x2 = 950.0, y2 = 100.0
            , onLampClick = LampClicked
+           , selected = sel 'F'
            } model.lights.frontSceneStrip
        , Strip.view
            { x1 = 75.0, y1 = 150.0
            , x2 = 925.0, y2 = 150.0
            , onLampClick = LampClicked
+           , selected = sel 'M'
            } model.lights.middleSceneStrip
        , Strip.view
            { x1 = 100.0, y1 = 200.0
            , x2 = 900.0, y2 = 200.0
            , onLampClick = LampClicked
+           , selected = sel 'B'
            } model.lights.backSceneStrip
        , Strip.view
            { x1 = 125.0, y1 = 650.0
            , x2 = 875.0, y2 = 650.0
            , onLampClick = LampClicked
+           , selected = sel 'P'
            } model.lights.proSceneStrip
        , Strip.view
            { x1 = 75.0, y1 = 550.0
            , x2 = 75.0, y2 = 350.0
            , onLampClick = LampClicked
+           , selected = sel 'L'
            } model.lights.leftStrip
        , Strip.view
            { x1 = 925.0, y1 = 550.0
            , x2 = 925.0, y2 = 350.0
            , onLampClick = LampClicked
+           , selected = sel 'R'
            } model.lights.rightStrip
        , ColorSelector.view { x = 500, y = 400, onChange = SelectionChanged } model.selector
        ]
@@ -158,10 +145,6 @@ view model =
        ]
     , div [] [ Html.text model.text ]
     ]
-
-wsUrl : String
-wsUrl = "ws://192.168.1.26:3000"
--- wsUrl = "ws://~:3000"
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
@@ -173,7 +156,7 @@ update msg model =
         Err msg ->
           { model | text = msg } ! []
     Send ->
-      model ! [ WebSocket.send wsUrl (JE.encode 0 (jsValue model.lights)) ]
+      model ! [ WebSocket.send model.wsUrl (JE.encode 0 (jsValue model.lights)) ]
     SelectionChanged colorModel ->
       -- TODO: I think this is a hack
       -- DONE: Fixed it ;-)
@@ -182,17 +165,22 @@ update msg model =
           { model
           | selector = colorModel
           , lights = updateStrip c (\ s ->
-               Strip.setLamp s (Lamp colorModel model.selectedLampIndex)
+              if colorModel.active then
+                 Strip.setLamp s (Lamp colorModel.color model.selectedLampIndex)
+              else
+                 Strip.removeLamp s model.selectedLampIndex
                ) model.lights
           } ! []
         _ -> model ! []
     LampClicked stripCode lamp ->
       { model
-      | selector = lamp.selector
+      | selector = ColorSelection lamp.color lamp.active ColorSelector.Passive
       , selectedStripCode = Just stripCode
       , selectedLampIndex = lamp.index
       } ! []
     Dummy -> (model, Cmd.none)
+    SetLocation l ->
+      { model | wsUrl = "ws://" ++ (log "Changed Location:" l).host} ! []
 
 updateStrip : Char -> (Strip -> Strip) -> LightState -> LightState
 updateStrip c fn l =
@@ -208,4 +196,4 @@ updateStrip c fn l =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-  WebSocket.listen wsUrl Receive
+  WebSocket.listen model.wsUrl Receive
