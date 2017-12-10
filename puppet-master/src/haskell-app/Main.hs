@@ -24,7 +24,7 @@ import qualified Network.Wai.Handler.Warp       as Warp
 import qualified Network.Wai.Handler.WebSockets as WS
 import qualified Network.WebSockets             as WS
 
-import           Data.Aeson                     (FromJSON, ToJSON, decode,
+import           Data.Aeson                     (FromJSON, ToJSON, eitherDecode',
                                                  encode)
 
 import           Puppetry.State
@@ -84,20 +84,21 @@ listen :: Client -> PuppetServer ()
 listen client =
   Monad.forever $ do
     msg <- liftIO $ recv client
+    liftIO $ putStrLn $ "Received message from: " ++ show (client ^. _1)
     case msg of
-      Just state -> do
+      Right state -> do
         -- Lock state until broadcast is completed
         atomic $ do
           lights .= state
           clients <- use clientList
           liftIO $ multisend state clients
-      Nothing ->
-        return ()
+      Left err -> do
+        liftIO $ putStrLn ("Error in conversion: " ++ err)
 
 -- | Receive data from the client
-recv :: FromJSON a => Client -> IO (Maybe a)
+recv :: FromJSON a => Client -> IO (Either String a)
 recv (_, conn) =
-  decode <$> liftIO (WS.receiveData conn)
+  eitherDecode' <$> liftIO (WS.receiveData conn)
 
 -- | Broadcast the state to list clients.
 multisend :: ToJSON a => a -> [Client] -> IO ()
