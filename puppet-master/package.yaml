@@ -21,7 +21,6 @@ dependencies:
   - scotty
   - serialport
   - text
-  - text
   - unix
   - vector
   - wai
@@ -29,6 +28,7 @@ dependencies:
   - wai-websockets
   - warp
   - websockets
+  - containers
 #  - scotty
 #  - blaze-html
 

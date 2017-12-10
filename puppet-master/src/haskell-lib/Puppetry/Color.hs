@@ -12,9 +12,9 @@ import GHC.Generics (Generic)
 
 import Data.Binary.Put
 import Data.Binary
-import Data.Aeson (parseJSON, FromJSON, Value(..))
+import Data.Aeson (parseJSON, FromJSON, Value(..), toJSON, ToJSON)
 
-import           Numeric (readHex)
+import           Numeric (readHex, showHex)
 import           Control.Monad
 
 
@@ -48,3 +48,9 @@ instance FromJSON Color where
         return $ decode (runPut (putWord32be i))
       _ -> mzero
   parseJSON _ = mzero
+
+instance ToJSON Color where
+  toJSON c =
+   toJSON (showHex (red c) $ showHex (blue c) $ showHex (green c) $ "")
+
+    -- toEncoding = genericToEncoding defaultOptions
