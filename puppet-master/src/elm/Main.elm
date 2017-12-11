@@ -12,7 +12,6 @@ import Html.Events exposing (onClick)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import WebSocket
--- import Puppetry.ColorSelect as ColorSelect
 import Puppetry.ColorSelector as ColorSelector exposing (ColorSelection)
 import Puppetry.Lamp as Lamp exposing (Lamp)
 import Puppetry.Strip as Strip exposing (Strip)
