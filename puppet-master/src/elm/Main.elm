@@ -12,7 +12,6 @@ import Html.Events exposing (onClick)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import WebSocket
--- import Puppetry.ColorSelect as ColorSelect
 import Puppetry.ColorSelector as ColorSelector exposing (ColorSelection)
 import Puppetry.Lamp as Lamp exposing (Lamp)
 import Puppetry.Strip as Strip exposing (Strip)
@@ -170,7 +169,7 @@ update msg model =
               else
                  Strip.removeLamp s model.selectedLampIndex
                ) model.lights
-          } ! []
+          } ! [WebSocket.send model.wsUrl (JE.encode 0 (jsValue model.lights))]
         _ -> model ! []
     LampClicked stripCode lamp ->
       { model
