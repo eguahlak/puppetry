@@ -10,16 +10,16 @@ import SingleTouch
 
 -- MODEL
 
-type alias ColorSelection =
+type alias ColorSelector =
   { color : Color
   , active : Bool
   , state : State
   }
 
-init : Color -> ColorSelection
-init c =
+init : Color -> Bool -> ColorSelector
+init c a =
   { color = c
-  , active = False
+  , active = a
   , state = Passive
   }
 
@@ -28,6 +28,7 @@ init c =
 type State
   = Passive
   | Setting Selection
+
   | Switching Selection
 
 toText : State -> String
@@ -35,7 +36,7 @@ toText state =
   case state of
     Passive -> "Passive"
     Setting { dist, angle } -> "Setting dist:"++(toString dist)++" angle:"++(toString angle)
-    Switching { dist, angle } -> "Switching dist:"++(toString dist)++" angle:"++(toString angle)
+    Switching { dist, angle } -> "Setting dist:"++(toString dist)++" angle:"++(toString angle)
 
 -- VIEW
 
@@ -48,10 +49,11 @@ buttonReach = 200
 type alias Config msg =
   { x : Int
   , y : Int
-  , onChange : ColorSelection -> msg
+  , onChange : ColorSelector -> msg
+  , onSelection : ColorSelector -> msg
   }
 
-view : Config msg -> ColorSelection -> Svg msg
+view : Config msg -> ColorSelector -> Svg msg
 view config model =
   g [ translate config
     , SingleTouch.onStart (handleOnChange config model)
@@ -67,7 +69,7 @@ view config model =
       , viewButton config model
       ]
 
-viewButton : Config msg -> ColorSelection -> List (Svg msg)
+viewButton : Config msg -> ColorSelector -> List (Svg msg)
 viewButton config model =
     [ circle
       [ r (toString buttonSize)
@@ -83,7 +85,7 @@ viewButton config model =
       ] []
     ]
 
-viewSelection : ColorSelection -> List (Svg msg)
+viewSelection : ColorSelector -> List (Svg msg)
 viewSelection { color, active, state } =
   case state of
     Passive -> []
@@ -150,7 +152,7 @@ positionFromCoordinates config coordinates =
     { x = x - (toFloat config.x), y = y - (toFloat config.y) }
 
 
-handleOnChange : Config msg -> ColorSelection -> Touch.Coordinates -> msg
+handleOnChange : Config msg -> ColorSelector -> Touch.Coordinates -> msg
 handleOnChange config model coordinates =
  let
    p = positionFromCoordinates config coordinates
@@ -158,13 +160,13 @@ handleOnChange config model coordinates =
  in
    config.onChange (modelChangeFromSelection s model)
 
-handleOnEnd : Config msg -> ColorSelection -> Touch.Coordinates -> msg
+handleOnEnd : Config msg -> ColorSelector -> Touch.Coordinates -> msg
 handleOnEnd config model coordinates =
  let
    p = positionFromCoordinates config coordinates
    s = selectionFromPosition p
  in
-   config.onChange (modelEndFromSelection s model)
+   config.onSelection (modelEndFromSelection s model)
 
 stateOfSelection : Selection -> State
 stateOfSelection selection =
@@ -172,7 +174,7 @@ stateOfSelection selection =
   else if selection.dist < (buttonSize + buttonReach) then Setting selection
   else Passive
 
-modelChangeFromSelection : Selection -> ColorSelection -> ColorSelection
+modelChangeFromSelection : Selection -> ColorSelector -> ColorSelector
 modelChangeFromSelection selection model =
   case stateOfSelection selection of
     Passive -> { model | state = Passive }
@@ -183,7 +185,7 @@ modelChangeFromSelection selection model =
       }
     Switching sel -> { model | state = Switching sel }
 
-modelEndFromSelection : Selection -> ColorSelection -> ColorSelection
+modelEndFromSelection : Selection -> ColorSelector -> ColorSelector
 modelEndFromSelection selection model =
   case stateOfSelection selection of
     Passive -> { model | state = Passive }

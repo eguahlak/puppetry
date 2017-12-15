@@ -12,7 +12,7 @@ import Html.Events exposing (onClick)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import WebSocket
-import Puppetry.ColorSelector as ColorSelector exposing (ColorSelection)
+import Puppetry.ColorSelector as ColorSelector exposing (ColorSelector)
 import Puppetry.Lamp as Lamp exposing (Lamp)
 import Puppetry.Strip as Strip exposing (Strip)
 
@@ -26,7 +26,7 @@ main =
      }
 
 type alias Model =
-  { selector : ColorSelection
+  { selector : ColorSelector
   , lights : LightState
   , selectedStripCode : Maybe Char
   , selectedLampIndex : Int
@@ -37,9 +37,9 @@ type alias Model =
 
 type Msg
   = Receive String
-  | Send
   | SetLocation Navigation.Location
-  | SelectionChanged ColorSelection
+  | SetActiveLamp ColorSelector
+  | SelectionChanged ColorSelector
   | LampClicked Char Lamp.StripLamp
   | Dummy
 
@@ -75,7 +75,7 @@ decodeLights =
 
 init : Navigation.Location -> (Model, Cmd Msg)
 init l =
-  ( { selector = ColorSelector.init (rgb 255 255 0)
+  ( { selector = ColorSelector.init (rgb 255 255 0) True
     , lights =
       { backSceneStrip = Strip 'B' 26 []
       , middleSceneStrip = Strip 'M' 26 []
@@ -136,11 +136,12 @@ view model =
            , onLampClick = LampClicked
            , selected = sel 'R'
            } model.lights.rightStrip
-       , ColorSelector.view { x = 500, y = 400, onChange = SelectionChanged } model.selector
-       ]
-    , div []
-       [ p [] [ Html.text <| "Pokes: " ++ toString model.number ]
-       , button [ onClick Send ] [ Html.text "Poke others" ]
+       , ColorSelector.view
+           { x = 500
+           , y = 400
+           , onChange = SelectionChanged
+           , onSelection = SetActiveLamp
+           } model.selector
        ]
     , div [] [ Html.text model.text ]
     ]
@@ -154,34 +155,33 @@ update msg model =
           { model | lights = lights } ! []
         Err msg ->
           { model | text = msg } ! []
-    Send ->
-      model ! [ WebSocket.send model.wsUrl (JE.encode 0 (jsValue model.lights)) ]
-    SelectionChanged colorModel ->
-      -- TODO: I think this is a hack
-      -- DONE: Fixed it ;-)
+    SelectionChanged sel ->
+      { model | selector = sel } ! []
+    SetActiveLamp sel ->
       case model.selectedStripCode of
         Just c ->
-         let lights = updateStrip c (\ s ->
-              if colorModel.active then
-                 Strip.setLamp s (Lamp colorModel.color model.selectedLampIndex)
+        let lights = updateStrip c (\ s ->
+              if sel.active then
+                Strip.setLamp s (Lamp sel.color model.selectedLampIndex)
               else
-                 Strip.removeLamp s model.selectedLampIndex
-               ) model.lights
+                Strip.removeLamp s model.selectedLampIndex
+              ) model.lights
           in
           { model
-          | selector = colorModel
+          | selector = sel
           , lights = lights
           } ! [ WebSocket.send model.wsUrl (JE.encode 0 (jsValue lights))]
         _ -> model ! []
     LampClicked stripCode lamp ->
       { model
-      | selector = ColorSelection lamp.color lamp.active ColorSelector.Passive
+      | selector = ColorSelector.init lamp.color lamp.active
       , selectedStripCode = Just stripCode
       , selectedLampIndex = lamp.index
       } ! []
     Dummy -> (model, Cmd.none)
     SetLocation l ->
       { model | wsUrl = "ws://" ++ (log "Changed Location:" l).host} ! []
+
 
 updateStrip : Char -> (Strip -> Strip) -> LightState -> LightState
 updateStrip c fn l =
