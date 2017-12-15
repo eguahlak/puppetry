@@ -1,3 +1,4 @@
+
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -27,7 +28,10 @@ import qualified Network.WebSockets             as WS
 import           Data.Aeson                     (FromJSON, ToJSON, eitherDecode',
                                                  encode)
 
+import System.IO
+
 import           Puppetry.State
+import           Puppetry.Transfer
 
 type ClientId = Int
 type Client   = (ClientId, WS.Connection)
@@ -81,7 +85,8 @@ wsApp stateRef pendingConn = do
 -- | Listen on a client, if we receive a state from the client
 -- we update and broadcast.
 listen :: Client -> PuppetServer ()
-listen client =
+listen client = do
+  atomic $ printState
   Monad.forever $ do
     msg <- liftIO $ recv client
     liftIO $ putStrLn $ "Received message from: " ++ show (client ^. _1)
@@ -90,10 +95,16 @@ listen client =
         -- Lock state until broadcast is completed
         atomic $ do
           lights .= state
+          printState
           clients <- use clientList
           liftIO $ multisend state clients
       Left err -> do
         liftIO $ putStrLn ("Error in conversion: " ++ err)
+
+printState :: Puppetry ()
+printState = do
+    s <- use lights
+    liftIO $ transfer stdout s
 
 -- | Receive data from the client
 recv :: FromJSON a => Client -> IO (Either String a)

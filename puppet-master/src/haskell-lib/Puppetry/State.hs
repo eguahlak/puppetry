@@ -52,6 +52,9 @@ empty = Strip $ Map.empty
 fromList :: [(Int, Color)] -> Strip
 fromList = Strip . Map.fromList
 
+toList :: Strip -> [(Int, Color)]
+toList = Map.toAscList . fromMap
+
 
 newtype ActiveLamp = ActiveLamp { toPair :: (Int, Color) }
 

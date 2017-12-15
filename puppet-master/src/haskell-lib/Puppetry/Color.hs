@@ -21,7 +21,7 @@ data Color = Color
   , red   :: !Word8
   , green :: !Word8
   , blue  :: !Word8
-  } deriving (Show, Read, Generic)
+  } deriving (Show, Read, Generic, Eq)
 
 cBlack :: Color
 cBlack = Color { red = 0, green = 0, blue = 0, phase = 0 }
