@@ -13,8 +13,7 @@ import qualified Control.Exception              as Exception
 import           Control.Lens
 import qualified Control.Monad                  as Monad
 import           Control.Monad.Reader
-import           Control.Monad.State            (StateT, get, modify, put,
-                                                 runStateT)
+import           Control.Monad.State            (StateT, runStateT)
 import qualified Data.List                      as List
 import           Data.Monoid
 import           Data.Semigroup                 hiding ((<>))
@@ -25,10 +24,14 @@ import qualified Network.Wai.Handler.Warp       as Warp
 import qualified Network.Wai.Handler.WebSockets as WS
 import qualified Network.WebSockets             as WS
 
-import           Data.Aeson                     (FromJSON, ToJSON, eitherDecode',
-                                                 encode)
+import           Data.Aeson                     (FromJSON, ToJSON,
+                                                 eitherDecode', encode)
 
-import System.IO
+import           System.Environment
+import           System.Hardware.Serialport     (SerialPortSettings,
+                                                 defaultSerialSettings,
+                                                 hOpenSerial)
+import           System.IO
 
 import           Puppetry.State
 import           Puppetry.Transfer
@@ -39,6 +42,7 @@ type Client   = (ClientId, WS.Connection)
 type StateRef = Concurrent.MVar ServerState
 data ServerState = ServerState
   { _clientList :: ![Client]
+  , _usbport    :: Maybe FilePath
   , _lights     :: !State
   }
 
@@ -55,15 +59,28 @@ atomic
 atomic m = do
   ref <- ask
   liftIO . Concurrent.modifyMVar ref $ \ s -> do
-    (s, a) <- runStateT m s
-    return (a, s)
+    (s', a) <- runStateT m s
+    return (a, s')
 
+sInit :: Maybe FilePath -> ServerState
+sInit uport =
+  ServerState
+    []
+    uport
+    exampleState
 
+serialSettings :: SerialPortSettings
+serialSettings =
+  defaultSerialSettings
+
+-- | main is run with
+-- puppet-master <port> <usbport>
 main :: IO ()
 main = do
-  stateRef <- Concurrent.newMVar (ServerState [] exampleState)
-  let port = 3000
+  [strPort, uport] <- getArgs
+  let port = read strPort
   putStrLn $ "Starting puppet-master at " ++ show port
+  stateRef <- Concurrent.newMVar (sInit (if uport == "-" then Nothing else Just uport))
   Warp.run port $ WS.websocketsOr
     WS.defaultConnectionOptions
     (wsApp stateRef)
@@ -86,7 +103,6 @@ wsApp stateRef pendingConn = do
 -- we update and broadcast.
 listen :: Client -> PuppetServer ()
 listen client = do
-  atomic $ printState
   Monad.forever $ do
     msg <- liftIO $ recv client
     liftIO $ putStrLn $ "Received message from: " ++ show (client ^. _1)
@@ -104,7 +120,18 @@ listen client = do
 printState :: Puppetry ()
 printState = do
     s <- use lights
-    liftIO $ transfer stdout s
+    p <- use usbport
+    case p of
+      Nothing ->
+        liftIO $ do
+          transfer stdout s
+      Just p' ->
+        liftIO $ do
+          h <- hOpenSerial p' serialSettings
+          transfer h s
+          str <- readToBang h
+          putStrLn $ "Response: '" ++ str ++ "'"
+          hClose h
 
 -- | Receive data from the client
 recv :: FromJSON a => Client -> IO (Either String a)

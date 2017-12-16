@@ -42,8 +42,17 @@ transfer h sts = do
   forM_ (toLampList sts) $ \l ->  do
     hPutStr h $ lampToString l
     hPutStr h "\n"
-  hPutStr h "$\n"
+  hPutStr h "!\n"
+  hFlush h
 
+readToBang :: Handle -> IO String
+readToBang h = do
+  c <- hGetChar h
+  if c == '!' then
+    return ""
+  else do
+    str <- readToBang h
+    return (c : str)
 
 toLampList :: State -> [ Lamp ]
 toLampList s =
