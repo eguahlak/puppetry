@@ -22,6 +22,7 @@ import qualified Network.Wai                    as Wai
 import qualified Network.Wai.Application.Static as WSS
 import qualified Network.Wai.Handler.Warp       as Warp
 import qualified Network.Wai.Handler.WebSockets as WS
+
 import qualified Network.WebSockets             as WS
 
 import           Data.Aeson                     (FromJSON, ToJSON,
@@ -30,7 +31,8 @@ import           Data.Aeson                     (FromJSON, ToJSON,
 import           System.Environment
 import           System.Hardware.Serialport     (SerialPortSettings,
                                                  defaultSerialSettings,
-                                                 hOpenSerial)
+                                                 hOpenSerial,
+                                                 withSerial)
 import           System.IO
 
 import           Puppetry.State
@@ -127,11 +129,12 @@ printState = do
           transfer stdout s
       Just p' ->
         liftIO $ do
-          h <- hOpenSerial p' serialSettings
-          transfer h s
-          str <- readToBang h
-          putStrLn $ "Response: '" ++ str ++ "'"
-          hClose h
+          withSerial p' serialSettings $ transferS s
+          -- h <- hOpenSerial p'
+          -- transfer h s
+          -- str <- readToBang h
+          -- putStrLn $ "Response: '" ++ str ++ "'"
+          -- hClose h
 
 -- | Receive data from the client
 recv :: FromJSON a => Client -> IO (Either String a)

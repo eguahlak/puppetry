@@ -4,6 +4,9 @@ import Puppetry.State
 import Puppetry.Color
 
 import GHC.IO.Handle
+import System.Hardware.Serialport
+
+import qualified Data.ByteString.Char8 as B
 
 import Control.Monad
 import Data.List
@@ -37,12 +40,19 @@ data Lamp = Lamp
   } deriving (Show, Eq)
 
 
+stateToString :: State -> String
+stateToString s =
+  let str = (map ((++ "\n") . lampToString) $ toLampList s) ++ [ "!" ];
+  in intercalate "" str
+
+transferS :: State -> SerialPort -> IO ()
+transferS state sp = do
+  send sp (B.pack $ stateToString state)
+  return ()
+
 transfer :: Handle -> State -> IO ()
 transfer h sts = do
-  forM_ (toLampList sts) $ \l ->  do
-    hPutStr h $ lampToString l
-    hPutStr h "\n"
-  hPutStr h "!\n"
+  hPutStr h $ stateToString sts
   hFlush h
 
 readToBang :: Handle -> IO String
