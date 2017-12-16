@@ -8,7 +8,7 @@ import System.Hardware.Serialport
 
 import qualified Data.ByteString.Char8 as B
 
-import Control.Monad
+
 import Data.List
 
 import Numeric
@@ -48,21 +48,20 @@ stateToString s =
 transferS :: State -> SerialPort -> IO ()
 transferS state sp = do
   send sp (B.pack $ stateToString state)
-  return ()
+  flush sp
 
 transfer :: Handle -> State -> IO ()
 transfer h sts = do
   hPutStr h $ stateToString sts
   hFlush h
 
-readToBang :: Handle -> IO String
-readToBang h = do
-  c <- hGetChar h
-  if c == '!' then
-    return ""
-  else do
-    str <- readToBang h
-    return (c : str)
+readToBang :: SerialPort -> IO ()
+readToBang sp = do
+  c <- B.unpack <$> recv sp 1
+  putStr c
+  if c /= "!"
+    then readToBang sp
+    else return ()
 
 toLampList :: State -> [ Lamp ]
 toLampList s =

@@ -123,13 +123,15 @@ printState :: Puppetry ()
 printState = do
     s <- use lights
     p <- use usbport
+    liftIO $ do
+      transfer stdout s
     case p of
-      Nothing ->
-        liftIO $ do
-          transfer stdout s
+      Nothing -> return ()
       Just p' ->
         liftIO $ do
-          withSerial p' serialSettings $ transferS s
+          withSerial p' serialSettings $ \ sp -> do
+            transferS s sp
+            readToBang sp
           -- h <- hOpenSerial p'
           -- transfer h s
           -- str <- readToBang h
