@@ -29,7 +29,8 @@ import           Data.Aeson                     (FromJSON, ToJSON,
                                                  eitherDecode', encode)
 
 import           System.Environment
-import           System.Hardware.Serialport     (SerialPortSettings,
+import           System.Hardware.Serialport     (SerialPortSettings(..),
+                                                 SerialPort,
                                                  defaultSerialSettings,
                                                  hOpenSerial,
                                                  withSerial)
@@ -45,6 +46,7 @@ type StateRef = Concurrent.MVar ServerState
 data ServerState = ServerState
   { _clientList :: ![Client]
   , _usbport    :: Maybe FilePath
+  , _serialport :: SerialPort
   , _lights     :: !State
   }
 
@@ -64,16 +66,17 @@ atomic m = do
     (s', a) <- runStateT m s
     return (a, s')
 
-sInit :: Maybe FilePath -> ServerState
-sInit uport =
+sInit :: SerialPort -> Maybe FilePath -> ServerState
+sInit sp uport =
   ServerState
     []
     uport
+    sp
     exampleState
 
 serialSettings :: SerialPortSettings
 serialSettings =
-  defaultSerialSettings
+  defaultSerialSettings { timeout = 10 };
 
 -- | main is run with
 -- puppet-master <port> <usbport>
@@ -82,11 +85,12 @@ main = do
   [strPort, uport] <- getArgs
   let port = read strPort
   putStrLn $ "Starting puppet-master at " ++ show port
-  stateRef <- Concurrent.newMVar (sInit (if uport == "-" then Nothing else Just uport))
-  Warp.run port $ WS.websocketsOr
-    WS.defaultConnectionOptions
-    (wsApp stateRef)
-    httpApp
+  withSerial uport serialSettings $ \sp -> do
+    stateRef <- Concurrent.newMVar (sInit sp (if uport == "-" then Nothing else Just uport))
+    Warp.run port $ WS.websocketsOr
+      WS.defaultConnectionOptions
+      (wsApp stateRef)
+      httpApp
 
 httpApp :: Wai.Application
 httpApp =
@@ -123,13 +127,13 @@ printState :: Puppetry ()
 printState = do
     s <- use lights
     p <- use usbport
+    sp <- use serialport
     liftIO $ do
       transfer stdout s
     case p of
       Nothing -> return ()
       Just p' ->
         liftIO $ do
-          withSerial p' serialSettings $ \ sp -> do
             transferS s sp
             readToBang sp
           -- h <- hOpenSerial p'
