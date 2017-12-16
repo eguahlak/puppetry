@@ -59,7 +59,7 @@ readToBang :: SerialPort -> IO ()
 readToBang sp = do
   c <- B.unpack <$> recv sp 1
   putStr c
-  if c /= "!"
+  if c /= ""
     then readToBang sp
     else return ()
 
