@@ -1,3 +1,8 @@
+# OBS!
+
+Den aktive branch er pt. "develop"
+
+
 # IoP - Dukketeaterkode
 
 * Raspberry pie med wifi dongle
