@@ -14,26 +14,21 @@ import           Control.Lens
 import qualified Control.Monad                  as Monad
 import           Control.Monad.Reader
 import           Control.Monad.State            (StateT, runStateT)
+import           Data.Aeson                     (FromJSON, ToJSON,
+                                                 eitherDecode', encode)
 import qualified Data.List                      as List
 import           Data.Monoid
 import           Data.Semigroup                 hiding ((<>))
-
 import qualified Network.Wai                    as Wai
 import qualified Network.Wai.Application.Static as WSS
 import qualified Network.Wai.Handler.Warp       as Warp
 import qualified Network.Wai.Handler.WebSockets as WS
-
 import qualified Network.WebSockets             as WS
-
-import           Data.Aeson                     (FromJSON, ToJSON,
-                                                 eitherDecode', encode)
-
 import           System.Environment
-import           System.Hardware.Serialport     (SerialPortSettings(..),
-                                                 SerialPort,
+import           System.Hardware.Serialport     (SerialPort,
+                                                 SerialPortSettings (..),
                                                  defaultSerialSettings,
-                                                 hOpenSerial,
-                                                 withSerial)
+                                                 hOpenSerial, withSerial)
 import           System.IO
 
 import           Puppetry.State
@@ -45,8 +40,7 @@ type Client   = (ClientId, WS.Connection)
 type StateRef = Concurrent.MVar ServerState
 data ServerState = ServerState
   { _clientList :: ![Client]
-  , _usbport    :: Maybe FilePath
-  , _serialport :: SerialPort
+  , _serialport :: Maybe (FilePath, SerialPort)
   , _lights     :: !State
   }
 
@@ -66,11 +60,10 @@ atomic m = do
     (s', a) <- runStateT m s
     return (a, s')
 
-sInit :: SerialPort -> Maybe FilePath -> ServerState
-sInit sp uport =
+sInit :: Maybe (FilePath, SerialPort) -> ServerState
+sInit sp =
   ServerState
     []
-    uport
     sp
     exampleState
 
@@ -85,12 +78,22 @@ main = do
   [strPort, uport] <- getArgs
   let port = read strPort
   putStrLn $ "Starting puppet-master at " ++ show port
-  withSerial uport serialSettings $ \sp -> do
-    stateRef <- Concurrent.newMVar (sInit sp (if uport == "-" then Nothing else Just uport))
-    Warp.run port $ WS.websocketsOr
-      WS.defaultConnectionOptions
-      (wsApp stateRef)
-      httpApp
+  if uport /= "-" 
+    then 
+      withSerial uport serialSettings $ \sp -> do
+        stateRef <- Concurrent.newMVar (sInit $ Just (uport, sp))
+        run port stateRef
+    else do
+      stateRef <- Concurrent.newMVar (sInit Nothing)
+      run port stateRef
+
+  where
+    run port stateRef =
+      Warp.run port $ WS.websocketsOr
+        WS.defaultConnectionOptions
+        (wsApp stateRef)
+        httpApp
+
 
 httpApp :: Wai.Application
 httpApp =
@@ -126,13 +129,12 @@ listen client = do
 printState :: Puppetry ()
 printState = do
     s <- use lights
-    p <- use usbport
-    sp <- use serialport
+    p <- use serialport
     liftIO $ do
       transfer stdout s
     case p of
       Nothing -> return ()
-      Just p' ->
+      Just (u, sp) ->
         liftIO $ do
             transferS s sp
             readToBang sp
