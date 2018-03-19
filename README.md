@@ -4,6 +4,22 @@
 
 Contains the webserver and the client code.
 
+Compile and run the Haskell backend and the Elm frontend by:
+
+```
+$ ./run <port number> <serial device>
+```
+or for testing with no Arduino attached:
+```
+$ ./run <port number> -
+```
+
+Examples
+```
+$ ./run 3000 /dev/cs.usbmodem14111
+$ ./run 3000 -
+```
+
 ### Protocol:
 
 ```
@@ -34,3 +50,5 @@ Contains the webserver and the client code.
 ## Puppet-lights
 
 Contains the arduino code, that manages the theater's lights.
+
+B<index>

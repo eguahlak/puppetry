@@ -8,7 +8,7 @@ class Strip {
 public:
   Strip(Adafruit_DotStar dotStar);
   ~Strip();
-  void setLamp(uint32_t number, uint32_t color);
+  void setLamp(uint32_t lamp);
   void show();
 private:
   int _lampCount;
