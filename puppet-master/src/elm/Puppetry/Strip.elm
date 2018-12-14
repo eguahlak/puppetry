@@ -63,7 +63,8 @@ type alias Config msg =
 
 view : Config msg -> Strip -> Svg msg
 view config strip =
-    let lamps = log "StripLamps" <| striplampsFromStrip <| log "Strip" strip
+--    let lamps = log "StripLamps" <| striplampsFromStrip <| log "Strip" strip
+    let lamps = striplampsFromStrip strip
     in g [] <|
         ( line
                [ x1 (toString config.x1)

@@ -39,14 +39,6 @@ decode =
     (JD.field "color" decodeColor)
     (JD.field "lamp" JD.int )
 
-decodeColor : Decoder Color
-decodeColor =
-  JD.map3 rgb
-    (JD.field "red" JD.int)
-    (JD.field "green" JD.int)
-    (JD.field "blue" JD.int)
-
-
 type alias StripLamp =
     { color : Color
     , active : Bool

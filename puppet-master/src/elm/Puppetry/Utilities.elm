@@ -1,6 +1,8 @@
 module Puppetry.Utilities exposing (..)
 
 import Color exposing (Color, rgb, toRgb, toHsl)
+import Json.Decode as JD exposing (Decoder)
+
 
 type alias Position = { x : Float, y : Float }
 
@@ -18,4 +20,9 @@ colorToCss color =
        ++ "," ++ toString rgb.blue
        ++ ")"
 
-    
+decodeColor : Decoder Color
+decodeColor =
+  JD.map3 rgb
+    (JD.field "red" JD.int)
+    (JD.field "green" JD.int)
+    (JD.field "blue" JD.int)
