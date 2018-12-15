@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE ViewPatterns     #-}
+{-# LANGUAGE RecordWildCards     #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE DeriveGeneric #-}
 
 module Puppetry.Color
   ( Color (..)
@@ -7,14 +9,19 @@ module Puppetry.Color
   , cRed
   , cGreen
   , cBlue
+
+  , averageColor
   ) where
 
-import           GHC.Generics (Generic)
-
+-- aseon
 import           Data.Aeson   (FromJSON, ToJSON, defaultOptions,
                                genericToEncoding, parseJSON, toEncoding,
                                withObject, (.!=), (.:?))
+
+-- base
 import           Data.Binary  as B
+import           Data.Monoid
+import           GHC.Generics (Generic)
 
 data Color = Color
   { phase :: !Word8
@@ -34,6 +41,26 @@ cGreen = cBlack { green = 255 }
 
 cBlue :: Color
 cBlue = cBlack { blue = 255 }
+
+
+averageColor ::
+  Foldable t =>
+  t Color -> Color
+averageColor f =
+  let (getSum -> cnt, p, r, g, b) =
+        foldMap (\Color {..} ->
+                   ( Sum 1
+                   , Sum . fromIntegral $ phase
+                   , Sum . fromIntegral $ red
+                   , Sum . fromIntegral $ green
+                   , Sum . fromIntegral $ blue
+                   )) f
+  in Color
+  { phase = round ((getSum p :: Double) / cnt)
+  , red = round ((getSum r :: Double) / cnt)
+  , green = round ((getSum g :: Double) / cnt)
+  , blue = round ((getSum b :: Double) / cnt)
+  }
 
 instance Binary Color
 

@@ -18,16 +18,20 @@ import           System.FilePath
 -- base
 import           GHC.Generics                   (Generic)
 
-import qualified Data.ByteString.Lazy as BL
+-- containers
+import qualified Data.Map                       as Map
+
+import qualified Data.ByteString.Lazy           as BL
 
 import qualified Control.Concurrent             as Concurrent
 import qualified Control.Exception              as Exception
-import           Control.Lens hiding ((<.>))
+import           Control.Lens                   hiding ((<.>))
 import qualified Control.Monad                  as Monad
 import           Control.Monad.Reader
 import           Control.Monad.State            (StateT, runStateT)
-import           Data.Aeson                     (FromJSON, ToJSON,
-                                                 eitherDecode', encode)
+import           Data.Aeson                     (FromJSON, ToJSON (..),
+                                                 defaultOptions, eitherDecode',
+                                                 encode, genericToEncoding)
 import qualified Data.List                      as List
 import           Data.Monoid
 import           Data.Semigroup                 hiding ((<>))
@@ -45,19 +49,31 @@ import           System.IO
 
 import           Puppetry.State
 import           Puppetry.Transfer
+import           Puppetry.Color
 
 type ClientId = Int
 type Client   = (ClientId, WS.Connection)
 
+data ClientState = ClientState
+  { _lights      :: !State
+  , _savedStates :: !(Map.Map Int Color)
+  } deriving (Generic)
+
+instance FromJSON ClientState
+
+instance ToJSON ClientState where
+  toEncoding = genericToEncoding defaultOptions
+
 type StateRef = Concurrent.MVar ServerState
 data ServerState = ServerState
-  { _clientList :: ![Client]
-  , _saveFolder :: !FilePath
-  , _serialport :: Maybe (FilePath, SerialPort)
-  , _lights     :: !State
+  { _clientList  :: ![Client]
+  , _saveFolder  :: !FilePath
+  , _serialport  :: Maybe (FilePath, SerialPort)
+  , _clientState :: !ClientState
   }
 
 makeLenses 'ServerState
+makeLenses 'ClientState
 
 type PuppetServer = ReaderT StateRef IO
 type Puppetry = StateT ServerState IO
@@ -73,13 +89,24 @@ atomic m = do
     (s', a) <- runStateT m s
     return (a, s')
 
-sInit :: FilePath -> Maybe (FilePath, SerialPort) -> ServerState
-sInit fp sp =
+initializeSavedStates :: FilePath -> IO (Map.Map Int Color)
+initializeSavedStates folder = do
+  createDirectoryIfMissing True folder
+  files <- listDirectory folder
+  states <- forM files $ \file -> do
+    let i = read . takeBaseName $ file
+    state <- eitherDecode' <$> BL.readFile file
+    return (i, either (const cBlack) average $ state)
+  return $ Map.fromList states
+
+
+sInit :: FilePath -> Maybe (FilePath, SerialPort) -> ClientState -> ServerState
+sInit fp sp cst =
   ServerState
     []
     fp
     sp
-    exampleState
+    cst
 
 serialSettings :: SerialPortSettings
 serialSettings =
@@ -91,17 +118,19 @@ main :: IO ()
 main = do
   [strPort, uport, folder] <- getArgs
 
-  createDirectoryIfMissing True folder
+  savedStates' <- initializeSavedStates folder
+  let state = ClientState exampleState savedStates'
 
   let port = read strPort
   putStrLn $ "Starting puppet-master at " ++ show port
   if uport /= "-"
     then
       withSerial uport serialSettings $ \sp -> do
-        stateRef <- Concurrent.newMVar (sInit folder $ Just (uport, sp))
+        stateRef <- Concurrent.newMVar
+          (sInit folder (Just (uport, sp)) state)
         run port stateRef
     else do
-      stateRef <- Concurrent.newMVar (sInit folder Nothing)
+      stateRef <- Concurrent.newMVar (sInit folder Nothing state)
       run port stateRef
 
   where
@@ -153,17 +182,19 @@ listen client = do
                 Left err -> do
                   liftIO . putStrLn $
                     "Could not load " ++ show no ++ ": " ++ err
+                  clientState.savedStates.at no .= Just (average emptyState)
                   updateState emptyState
-                Right state ->
+                Right state -> do
+                  clientState.savedStates.at no .= Just (average state)
                   updateState state
             Save no ->
-              saveState no =<< use lights
+              saveState no =<< use (clientState.lights)
       Left err -> do
         liftIO $ putStrLn ("Error in conversion: " ++ err)
 
   where
     updateState state = do
-      lights .= state
+      clientState.lights .= state
       printState
       clients <- use clientList
       liftIO $ multisend state clients
@@ -178,6 +209,7 @@ loadState i = do
 saveState :: Int -> State -> Puppetry ()
 saveState i state = do
   file <- getSaveFile i
+  clientState.savedStates.at i .= Just (average state)
   liftIO $ BL.writeFile file (encode state)
 
 getSaveFile :: Int -> Puppetry FilePath
@@ -187,7 +219,7 @@ getSaveFile i = do
 
 printState :: Puppetry ()
 printState = do
-    s <- use lights
+    s <- use (clientState.lights)
     p <- use serialport
     liftIO $ do
       transfer stdout s
@@ -227,7 +259,7 @@ connectClient :: WS.Connection -> PuppetServer Client
 connectClient conn =
   atomic $ do
     client <- addClient conn
-    st <- use lights
+    st <- use clientState
     liftIO $ putStrLn $ "Received new client: " ++ show (client ^. _1)
     liftIO $ send st client
     clients <- use clientList

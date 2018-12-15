@@ -1,8 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DeriveGeneric #-}
 module Puppetry.State where
 
-import Puppetry.Color (Color, cRed, cBlue, cGreen)
+import Puppetry.Color
 
 import Data.Semigroup
 
@@ -54,6 +55,17 @@ fromList = Strip . Map.fromList
 
 toList :: Strip -> [(Int, Color)]
 toList = Map.toAscList . fromMap
+
+average :: State -> Color
+average State {..} =
+  averageColor
+  [ averageColor . fromMap $ back
+  , averageColor . fromMap $ middle
+  , averageColor . fromMap $ front
+  , averageColor . fromMap $ left
+  , averageColor . fromMap $ right
+  , averageColor . fromMap $ proscenium
+  ]
 
 
 newtype ActiveLamp = ActiveLamp { toPair :: (Int, Color) }
