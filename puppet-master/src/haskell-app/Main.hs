@@ -29,9 +29,8 @@ import           Control.Lens                   hiding ((<.>))
 import qualified Control.Monad                  as Monad
 import           Control.Monad.Reader
 import           Control.Monad.State            (StateT, runStateT)
-import           Data.Aeson                     (FromJSON, ToJSON (..),
-                                                 defaultOptions, eitherDecode',
-                                                 encode, genericToEncoding)
+import           Data.Aeson hiding ((.=))
+import           Data.Aeson.TH
 import qualified Data.List                      as List
 import           Data.Monoid
 import           Data.Semigroup                 hiding ((<>))
@@ -59,10 +58,15 @@ data ClientState = ClientState
   , _savedStates :: !(Map.Map Int Color)
   } deriving (Generic)
 
-instance FromJSON ClientState
+dropOne :: Options
+dropOne = defaultOptions { fieldLabelModifier = drop 1 }
+
+instance FromJSON ClientState where
+  parseJSON = genericParseJSON dropOne
 
 instance ToJSON ClientState where
-  toEncoding = genericToEncoding defaultOptions
+  toJSON = genericToJSON dropOne
+  toEncoding = genericToEncoding dropOne
 
 type StateRef = Concurrent.MVar ServerState
 data ServerState = ServerState
