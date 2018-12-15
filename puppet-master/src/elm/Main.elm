@@ -42,6 +42,8 @@ type Msg
   | SetActiveLamp ColorSelector
   | SelectionChanged ColorSelector
   | LampClicked Char Lamp.StripLamp
+  | SaveStore Int
+  | LoadStore Int
   | Dummy
 
 type alias LightState =
@@ -53,16 +55,33 @@ type alias LightState =
   , proSceneStrip : Strip
   }
 
-jsValue : LightState -> JE.Value
-jsValue lights =
-  JE.object
-    [ ("back", Strip.jsValue lights.backSceneStrip)
-    , ("middle", Strip.jsValue lights.middleSceneStrip)
-    , ("front", Strip.jsValue lights.frontSceneStrip)
-    , ("left", Strip.jsValue lights.leftStrip)
-    , ("right", Strip.jsValue lights.rightStrip)
-    , ("proscenium", Strip.jsValue lights.proSceneStrip)
-    ]
+type alias PuppetryState =
+  { lights: LightState
+  }
+
+updateStateTag : LightState -> JE.Value
+updateStateTag lights =
+  tagged "UpdateState" <|
+    JE.object
+      [ ("back", Strip.jsValue lights.backSceneStrip)
+      , ("middle", Strip.jsValue lights.middleSceneStrip)
+      , ("front", Strip.jsValue lights.frontSceneStrip)
+      , ("left", Strip.jsValue lights.leftStrip)
+      , ("right", Strip.jsValue lights.rightStrip)
+      , ("proscenium", Strip.jsValue lights.proSceneStrip)
+      ]
+
+tagged : String -> JE.Value -> JE.Value
+tagged name value =
+  JE.object [ ("tag", JE.string name), ("contents", value)]
+
+loadTag : Int -> JE.Value
+loadTag index =
+  tagged "Load" (JE.int index)
+
+saveTag : Int -> JE.Value
+saveTag index =
+  tagged "Save" (JE.int index)
 
 decodeLights : Decoder LightState
 decodeLights =
@@ -73,6 +92,10 @@ decodeLights =
     (JD.field "left" (Strip.decode 'L' 6))
     (JD.field "right" (Strip.decode 'R' 6))
     (JD.field "proscenium" (Strip.decode 'P' 23))
+
+decodePuppetry : Decoder PuppetryState
+decodePuppetry =
+  JD.map PuppetryState (JD.field "lights" decodeLights)
 
 init : Navigation.Location -> (Model, Cmd Msg)
 init l =
@@ -100,7 +123,7 @@ view model =
   |> Maybe.andThen (\cx -> if cx == c then Just model.selectedLampIndex else Nothing)
   in
   div []
-    [ svg [ viewBox "0 0 1000 700", width "1000px" ]
+    [ svg [ viewBox "0 0 1000 900", width "1000px" ]
        [ Strip.view
            { x1 = 50.0, y1 = 100.0
            , x2 = 950.0, y2 = 100.0
@@ -143,7 +166,36 @@ view model =
            , onChange = SelectionChanged
            , onSelection = SetActiveLamp
            } model.selector
-       , Store.view { x = 500, y = 700 } (Store (rgb 255 100 100) False 7 )
+       , Store.view
+           { x = 500
+           , y = 730
+           , onClickSave = \s -> SaveStore s.index
+           , onClickLoad = \s -> LoadStore s.index
+           } (Store (rgb 255 100 100) False 7 )
+       , Store.view
+           { x = 300
+           , y = 730
+           , onClickSave = \s -> SaveStore s.index
+           , onClickLoad = \s -> LoadStore s.index
+           } (Store (rgb 255 100 100) False 21 )
+       , Store.view
+           { x = 400
+           , y = 730
+           , onClickSave = \s -> SaveStore s.index
+           , onClickLoad = \s -> LoadStore s.index
+           } (Store (rgb 255 100 100) False 3923 )
+       , Store.view
+           { x = 600
+           , y = 730
+           , onClickSave = \s -> SaveStore s.index
+           , onClickLoad = \s -> LoadStore s.index
+           } (Store (rgb 255 100 100) False 3 )
+       , Store.view
+           { x = 700
+           , y = 730
+           , onClickSave = \s -> SaveStore s.index
+           , onClickLoad = \s -> LoadStore s.index
+           } (Store (rgb 255 100 100) False 594 )
        ]
     , div [] [ Html.text model.text ]
     ]
@@ -152,9 +204,9 @@ update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     Receive json ->
-      case decodeString decodeLights (log "received" json) of
-        Ok lights ->
-          { model | lights = lights } ! []
+      case decodeString decodePuppetry (log "received" json) of
+        Ok puppetry ->
+          { model | lights = puppetry.lights } ! []
         Err msg ->
           { model | text = msg } ! []
     SelectionChanged sel ->
@@ -172,7 +224,7 @@ update msg model =
           { model
           | selector = sel
           , lights = lights
-          } ! [ WebSocket.send model.wsUrl (JE.encode 0 (jsValue lights))]
+          } ! [ WebSocket.send model.wsUrl (JE.encode 0 (updateStateTag lights))]
         _ -> model ! []
     LampClicked stripCode lamp ->
       { model
@@ -180,6 +232,10 @@ update msg model =
       , selectedStripCode = Just stripCode
       , selectedLampIndex = lamp.index
       } ! []
+    SaveStore index ->
+      model ! [ WebSocket.send model.wsUrl (JE.encode 0 (saveTag index))]
+    LoadStore index ->
+      model ! [ WebSocket.send model.wsUrl (JE.encode 0 (loadTag index))]
     Dummy -> (model, Cmd.none)
     SetLocation l ->
       { model | wsUrl = "ws://" ++ (log "Changed Location:" l).host} ! []
