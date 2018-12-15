@@ -99,7 +99,7 @@ initializeSavedStates folder = do
   files <- listDirectory folder
   states <- forM files $ \file -> do
     let i = read . takeBaseName $ file
-    state <- eitherDecode' <$> BL.readFile file
+    state <- eitherDecode' <$> BL.readFile (folder </> file)
     return (i, either (const cBlack) average $ state)
   return $ Map.fromList states
 
