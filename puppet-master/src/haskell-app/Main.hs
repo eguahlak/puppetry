@@ -197,9 +197,10 @@ listen client = do
         liftIO $ putStrLn ("Error in conversion: " ++ err)
 
   where
-    updateState state = do
-      clientState.lights .= state
+    updateState lights' = do
+      clientState.lights .= lights'
       printState
+      state <- use clientState
       clients <- use clientList
       liftIO $ multisend state clients
 
