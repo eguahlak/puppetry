@@ -15,6 +15,7 @@ import WebSocket
 import Puppetry.ColorSelector as ColorSelector exposing (ColorSelector)
 import Puppetry.Lamp as Lamp exposing (Lamp)
 import Puppetry.Strip as Strip exposing (Strip)
+import Puppetry.Store as Store exposing (Store)
 
 main : Program Never Model Msg
 main =
@@ -142,6 +143,7 @@ view model =
            , onChange = SelectionChanged
            , onSelection = SetActiveLamp
            } model.selector
+       , Store.view { x = 500, y = 700 } (Store (rgb 255 100 100) False 7 )
        ]
     , div [] [ Html.text model.text ]
     ]
