@@ -28,7 +28,7 @@ import           System.Environment
 import           System.Hardware.Serialport     (SerialPort,
                                                  SerialPortSettings (..),
                                                  defaultSerialSettings,
-                                                 hOpenSerial, withSerial)
+                                                 withSerial)
 import           System.IO
 
 import           Puppetry.State
@@ -78,8 +78,8 @@ main = do
   [strPort, uport] <- getArgs
   let port = read strPort
   putStrLn $ "Starting puppet-master at " ++ show port
-  if uport /= "-" 
-    then 
+  if uport /= "-"
+    then
       withSerial uport serialSettings $ \sp -> do
         stateRef <- Concurrent.newMVar (sInit $ Just (uport, sp))
         run port stateRef
@@ -134,7 +134,7 @@ printState = do
       transfer stdout s
     case p of
       Nothing -> return ()
-      Just (u, sp) ->
+      Just (_, sp) ->
         liftIO $ do
             transferS s sp
             readToBang sp

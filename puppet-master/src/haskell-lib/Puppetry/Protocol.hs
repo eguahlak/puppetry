@@ -10,7 +10,7 @@ module Puppetry.Protocol
   , Target(..)
   , PuppetCommand(..)
   , PuppetResponse(..)
-  , PuppetM (..)
+  , PuppetM
   , runPuppetry
   , unsafeRunPuppetry
   , defaultPuppetrySettings
@@ -21,7 +21,7 @@ module Puppetry.Protocol
   , withSerial
 
   , sendP
-  , sendCmd
+  -- , sendCmd
   , nop
   , set
   , gradient
@@ -46,10 +46,8 @@ import           Data.Bits
 import qualified Data.ByteString            as BS
 import qualified Data.ByteString.Lazy       as BL
 
-import           Data.Aeson                 (FromJSON (..), Object, Value (..),
-                                             (.:), (.:?))
+import           Data.Aeson                hiding (Error, encode)
 
-import           Data.String
 import qualified Data.Text                  as T
 import qualified Data.Vector                as V
 -- import           Numeric
@@ -105,6 +103,7 @@ instance FromJSON ArraySelect where
     return . mconcat $ items
   parseJSON _ = mzero
 
+noArrays :: ArraySelect
 noArrays = ArraySelect
   { backlight = False
   , midlight = False
@@ -113,6 +112,7 @@ noArrays = ArraySelect
   , sidelight = False
   }
 
+allArrays :: ArraySelect
 allArrays = ArraySelect
   { backlight = True
   , midlight = True
@@ -138,7 +138,7 @@ putArraySelect t =
 putBitList :: Bits a => [Bool] -> a -> a
 putBitList ls a' = go ls 0 a'
   where
-    lenghtA = a'
+    -- lenghtA = a'
     go (x:xs) i =
       setLast . go xs (i + 1)
       where
@@ -152,20 +152,25 @@ getBitList a i = go 0
     go j | j < i = testBit a j : go (j + 1)
     go _ = []
 
-leftSide = map (\x -> mod x 2 == 0) [0..26]
+leftSide :: [Bool]
+leftSide = map (\x -> mod x 2 == (0 :: Int) ) [0..26]
 
-rightSide = map (\x -> mod x 2 == 1) [0..26]
+rightSide :: [Bool]
+rightSide = map (\x -> mod x 2 == (1 :: Int)) [0..26]
 
 data Target = Target
   { arrays :: !ArraySelect
   , pixels :: ![Bool]
   } deriving (Show, Read, Generic)
 
+
+everything :: Target
 everything = Target
   { arrays = allArrays
   , pixels = replicate 27 True
   }
 
+nothing :: Target
 nothing = Target
   { arrays = noArrays
   , pixels = replicate 27 False
@@ -191,7 +196,7 @@ instance FromJSON Target where
           "left" -> return $ Target a leftSide
           "right" -> return $ Target a rightSide
           "all" -> return . Target a $ replicate 27 True
-          othervise -> mzero
+          _ -> mzero
       , do
         px <- o .: "pixels"
         return $ Target a px
@@ -220,12 +225,14 @@ instance Binary PuppetResponse where
         return AllOk
       0x3F ->
         return . Error $ "Bad Command"
-      otherwise ->
+      _ ->
         return . Error $ "Could not parse '" ++ show w ++ "'"
   put res =
     case res of
       AllOk ->
         putWord8 0x21
+      Error str ->
+        error $ "Should not write error to client:" ++ str
 
 data PuppetCommand
   = NOp
@@ -291,7 +298,7 @@ defaultPuppetrySettings =
 response will know what command to send next. -}
 data PuppetProgram next
   = SendP PuppetCommand (PuppetResponse -> next)
-  | SendCmd BS.ByteString next
+  -- | SendCmd BS.ByteString next
   | DoIO (IO next)
   deriving (Functor)
 
@@ -310,12 +317,12 @@ data PuppetInstruction
   deriving (Show, Read)
 
 instance FromJSON PuppetInstruction where
-  parseJSON (Object o) = do
+  parseJSON = withObject "PuppetInstruction" $ \o -> do
     inst :: Maybe T.Text <- o .:? "inst"
     case inst of
       Just "wait" ->
         PWait <$> o .: "ms"
-      otherwise ->
+      _ ->
         PSend <$> parseJSON (Object o)
 
 execute :: [PuppetInstruction] -> PuppetM ()
@@ -338,7 +345,7 @@ unsafeRunPuppetry sp puppet =
       unsafeRunPuppetry sp next
 
     Free (SendP cmd next) -> do
-      send sp . traceShowId . BL.toStrict $ encode cmd
+      _ <- send sp . traceShowId . BL.toStrict $ encode cmd
       rpl <- recvResponse sp
       case rpl of
         Error str ->
@@ -346,27 +353,28 @@ unsafeRunPuppetry sp puppet =
           case cmd of
             Test ->
               unsafeRunPuppetry sp $ next rpl
-            otherwise ->
+            _ ->
               error str
-        otherwise -> unsafeRunPuppetry sp $ next rpl
+        _ -> unsafeRunPuppetry sp $ next rpl
 
     Pure a ->
       return a
 
   where
-  recvResponse :: SerialPort -> IO PuppetResponse
-  recvResponse sp = do
-    bs <- recv sp 1
-    print bs
-    if 0 == BS.length bs
-      then recvResponse sp
-      else
-        case decodeOrFail $ BL.fromStrict bs of
-          Left a ->
-            error $ "Something technical happend: " ++ show a
-          Right (bs, bo, e) ->
-            return e
+    recvResponse :: SerialPort -> IO PuppetResponse
+    recvResponse port = do
+      bs <- recv port 1
+      print bs
+      if 0 == BS.length bs
+        then recvResponse port
+        else
+          case decodeOrFail $ BL.fromStrict bs of
+            Left a ->
+              error $ "Something technical happend: " ++ show a
+            Right (_, _, e) ->
+              return e
 
+printAll :: SerialPort -> IO ()
 printAll sp = do
   bs <- recv sp 1
   if BS.length bs > 0 && bs /= "!" then do
@@ -387,9 +395,9 @@ printProgram (Pure a) = return a
 printProgram (Free (SendP cmd next)) = do
   print cmd
   printProgram (next AllOk)
-printProgram (Free (SendCmd cmd next)) = do
-  print cmd
-  printProgram next
+-- printProgram (Free (SendCmd cmd next)) = do
+--   print cmd
+--   printProgram next
 printProgram (Free (DoIO m)) = do
   next <- m
   printProgram next
@@ -397,11 +405,11 @@ printProgram (Free (DoIO m)) = do
 sendP :: PuppetCommand -> PuppetM ()
 sendP = liftF . flip SendP (const ())
 
-sendCmd :: String -> PuppetM ()
-sendCmd = liftF . flip SendCmd () . fromString
+-- sendCmd :: String -> PuppetM ()
+-- sendCmd = liftF . flip SendCmd () . fromString
 
 nop :: Target -> Color -> PuppetM ()
-nop t c = sendP $ NOp
+nop _ _ = sendP $ NOp
 
 set :: Target -> Color -> PuppetM ()
 set t c = sendP $ Set t c
@@ -410,4 +418,4 @@ gradient :: Word32 -> Target -> Color -> PuppetM ()
 gradient ms t c = sendP $ Gradient ms t c
 
 test :: PuppetM Bool
-test = liftF $ SendP Test (\case AllOk -> True; otherwise -> False)
+test = liftF $ SendP Test (\case AllOk -> True; _ -> False)

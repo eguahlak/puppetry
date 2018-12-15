@@ -8,11 +8,9 @@ import System.Hardware.Serialport
 
 import qualified Data.ByteString.Char8 as B
 
-
 import Data.List
 
 import Numeric
-
 
 data StripName
   = StripBack
@@ -47,7 +45,7 @@ stateToString s =
 
 transferS :: State -> SerialPort -> IO ()
 transferS state sp = do
-  send sp (B.pack $ stateToString state)
+  _ <- send sp (B.pack $ stateToString state)
   flush sp
 
 transfer :: Handle -> State -> IO ()
