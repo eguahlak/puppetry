@@ -1,4 +1,4 @@
-
+{-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings     #-}
@@ -8,9 +8,21 @@
 
 module Main where
 
+
+-- directory
+import           System.Directory
+
+-- filepath
+import           System.FilePath
+
+-- base
+import           GHC.Generics                   (Generic)
+
+import qualified Data.ByteString.Lazy as BL
+
 import qualified Control.Concurrent             as Concurrent
 import qualified Control.Exception              as Exception
-import           Control.Lens
+import           Control.Lens hiding ((<.>))
 import qualified Control.Monad                  as Monad
 import           Control.Monad.Reader
 import           Control.Monad.State            (StateT, runStateT)
@@ -40,6 +52,7 @@ type Client   = (ClientId, WS.Connection)
 type StateRef = Concurrent.MVar ServerState
 data ServerState = ServerState
   { _clientList :: ![Client]
+  , _saveFolder :: !FilePath
   , _serialport :: Maybe (FilePath, SerialPort)
   , _lights     :: !State
   }
@@ -60,10 +73,11 @@ atomic m = do
     (s', a) <- runStateT m s
     return (a, s')
 
-sInit :: Maybe (FilePath, SerialPort) -> ServerState
-sInit sp =
+sInit :: FilePath -> Maybe (FilePath, SerialPort) -> ServerState
+sInit fp sp =
   ServerState
     []
+    fp
     sp
     exampleState
 
@@ -72,19 +86,22 @@ serialSettings =
   defaultSerialSettings { timeout = 10 };
 
 -- | main is run with
--- puppet-master <port> <usbport>
+-- puppet-master <port> <usbport> <folder>
 main :: IO ()
 main = do
-  [strPort, uport] <- getArgs
+  [strPort, uport, folder] <- getArgs
+
+  createDirectoryIfMissing True folder
+
   let port = read strPort
   putStrLn $ "Starting puppet-master at " ++ show port
   if uport /= "-"
     then
       withSerial uport serialSettings $ \sp -> do
-        stateRef <- Concurrent.newMVar (sInit $ Just (uport, sp))
+        stateRef <- Concurrent.newMVar (sInit folder $ Just (uport, sp))
         run port stateRef
     else do
-      stateRef <- Concurrent.newMVar (sInit Nothing)
+      stateRef <- Concurrent.newMVar (sInit folder Nothing)
       run port stateRef
 
   where
@@ -108,6 +125,15 @@ wsApp stateRef pendingConn = do
     (runReaderT (listen client) stateRef)
     (runReaderT (disconnectClient client) stateRef)
 
+
+data Protocol
+  = Save !Int
+  | Load !Int
+  | UpdateState !State
+  deriving (Show, Read, Generic)
+
+instance FromJSON Protocol
+
 -- | Listen on a client, if we receive a state from the client
 -- we update and broadcast.
 listen :: Client -> PuppetServer ()
@@ -116,15 +142,48 @@ listen client = do
     msg <- liftIO $ recv client
     liftIO $ putStrLn $ "Received message from: " ++ show (client ^. _1)
     case msg of
-      Right state -> do
-        -- Lock state until broadcast is completed
-        atomic $ do
-          lights .= state
-          printState
-          clients <- use clientList
-          liftIO $ multisend state clients
+      Right msg' ->
+        atomic $
+          case msg' of
+            UpdateState state ->
+              updateState state
+            Load no -> do
+              state' <- loadState no
+              case state' of
+                Left err -> do
+                  liftIO . putStrLn $
+                    "Could not load " ++ show no ++ ": " ++ err
+                  updateState emptyState
+                Right state ->
+                  updateState state
+            Save no ->
+              saveState no =<< use lights
       Left err -> do
         liftIO $ putStrLn ("Error in conversion: " ++ err)
+
+  where
+    updateState state = do
+      lights .= state
+      printState
+      clients <- use clientList
+      liftIO $ multisend state clients
+
+loadState :: Int -> Puppetry (Either String State)
+loadState i = do
+  file <- getSaveFile i
+  liftIO
+    . Exception.handle (\(_ :: Exception.IOException) -> return $ Left $ "No such file: " ++ file)
+    $ eitherDecode' <$> BL.readFile file
+
+saveState :: Int -> State -> Puppetry ()
+saveState i state = do
+  file <- getSaveFile i
+  liftIO $ BL.writeFile file (encode state)
+
+getSaveFile :: Int -> Puppetry FilePath
+getSaveFile i = do
+  f <- use saveFolder
+  return (f </> show i <.> "json")
 
 printState :: Puppetry ()
 printState = do
