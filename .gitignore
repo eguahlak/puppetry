@@ -2,6 +2,8 @@
 
 puppet-master/build
 
+puppet-master/saved
+
 ### Elm ###
 # elm-package generated files
 elm-stuff
