@@ -74,9 +74,8 @@ data ArraySelect = ArraySelect
   , sidelight  :: !Bool
   } deriving (Show, Read, Generic)
 
-instance Monoid ArraySelect where
-  mempty = noArrays
-  mappend m1 m2 =
+instance Semigroup ArraySelect where
+  (<>) m1 m2 =
     ArraySelect
      { backlight = backlight m1 || backlight m2
      , midlight = midlight m1 || midlight m2
@@ -84,6 +83,9 @@ instance Monoid ArraySelect where
      , scenelight = scenelight m1 || scenelight m2
      , sidelight = sidelight m1 || sidelight m2
      }
+
+instance Monoid ArraySelect where
+  mempty = noArrays
 
 instance FromJSON ArraySelect where
   parseJSON (String "all") =
