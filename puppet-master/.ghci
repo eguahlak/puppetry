@@ -1,0 +1,4 @@
+:set -fwarn-unused-binds -fwarn-unused-imports -Wall
+:set -isrc/haskell-app
+:set -isrc/haskell-lib
+:load Main

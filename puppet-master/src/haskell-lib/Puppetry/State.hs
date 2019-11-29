@@ -5,8 +5,6 @@ module Puppetry.State where
 
 import Puppetry.Color
 
-import Data.Semigroup
-
 import GHC.Generics (Generic)
 
 import Data.Aeson

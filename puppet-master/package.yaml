@@ -15,7 +15,6 @@ dependencies:
   - concurrent-extra
   - free
   - http-types
-  - monadplus
   - mtl
   - safe
   - scotty
