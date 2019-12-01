@@ -30,9 +30,7 @@ import qualified Control.Monad                  as Monad
 import           Control.Monad.Reader
 import           Control.Monad.State            (StateT, runStateT)
 import           Data.Aeson hiding ((.=))
-import           Data.Aeson.TH
 import qualified Data.List                      as List
-import           Data.Monoid
 import           Data.Semigroup                 hiding ((<>))
 import qualified Network.Wai                    as Wai
 import qualified Network.Wai.Application.Static as WSS
