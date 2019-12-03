@@ -1,6 +1,7 @@
 module Puppetry.Lamp exposing (..)
 
-import Color exposing (Color, rgb, toRgb, toHsl, black)
+import Color exposing (Color, fromRGB, toRGB, toHSL)
+import String exposing (fromFloat)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Html.Events exposing (..)
@@ -8,8 +9,7 @@ import Puppetry.Utilities exposing (..)
 import Json.Encode as JE
 import Json.Decode as JD exposing (Decoder)
 
-import Touch
-import SingleTouch
+import Html.Events.Extra.Touch as Touch
 
 lampRadius : Float
 lampRadius = 10
@@ -22,14 +22,14 @@ type alias Lamp =
 jsValue : Lamp -> JE.Value
 jsValue lamp =
   let
-    { red, green, blue } = toRgb lamp.color
+    ( red, green, blue) = toRGB lamp.color
   in
     JE.object
       [ ("lamp", JE.int lamp.index)
       , ("color", JE.object
-        [ ("red", JE.int red)
-        , ("green", JE.int green)
-        , ("blue", JE.int blue)
+        [ ("red", JE.float red)
+        , ("green", JE.float green)
+        , ("blue", JE.float blue)
         ] )
       ]
 
@@ -81,7 +81,7 @@ striplamps lms lst idx st =
                             Just lm ->
                                 lm.color
                             Nothing ->
-                                Color.black
+                                Color.fromRGB (0, 0, 0)
                 in
                     striplamps lms lst (idx - 1)
                         <| add color False (idx - 1) st
@@ -89,16 +89,15 @@ striplamps lms lst idx st =
 interpolate : Lamp -> Lamp -> Int -> Color
 interpolate start end index =
   let
-    startRgb = toRgb start.color
-    endRgb = toRgb end.color
+    (sr, sg, sb) = toRGB start.color
+    (er, eg, eb) = toRGB end.color
     length = end.index - start.index
-    di = index - start.index
-    dr = (endRgb.red - startRgb.red)//length
-    dg = (endRgb.green - startRgb.green)//length
-    db = (endRgb.blue - startRgb.blue)//length
+    di = toFloat (index - start.index)
+    dr = (er - sr) / toFloat length
+    dg = (eg - sg) / toFloat length
+    db = (eb - sb) / toFloat length
   in
-    rgb (startRgb.red + di*dr) (startRgb.green + di*dg) (startRgb.blue + di*db)
-
+    fromRGB (sr + di*dr, sg + di*dg, sb + di*db)
 
 
 -- View
@@ -121,22 +120,22 @@ view config model =
            then (1.8, 0.8, "white")
            else (1.4, 0.5, "black")
   in
-    g [ SingleTouch.onEnd (handleClick config model)
+    g [ Touch.onEnd (handleClick config model)
       , onClick (config.onClick model)
       ]
       [ circle
-        [ cx (toString config.x), cy (toString config.y), r (toString (size*lampRadius))
+        [ cx (fromFloat config.x), cy (fromFloat config.y), r (fromFloat (size*lampRadius))
         , fill (colorToCss model.color)
-        , fillOpacity (toString opacity)
+        , fillOpacity (fromFloat opacity)
         ] []
       , circle
-        [ cx (toString config.x), cy (toString config.y), r (toString lampRadius)
+        [ cx (fromFloat config.x), cy (fromFloat config.y), r (fromFloat lampRadius)
         , strokeWidth "1"
         , stroke orbit
         , fill (colorToCss model.color)
         ] []
       ]
 
-handleClick : Config msg -> StripLamp -> Touch.Coordinates -> msg
-handleClick config model coordinates =
+handleClick : Config msg -> StripLamp -> Touch.Event -> msg
+handleClick config model _ =
    config.onClick model

@@ -1,12 +1,12 @@
 module Puppetry.ColorSelector exposing (..)
 
-import Color exposing (Color, rgb, toRgb, toHsl)
+import Color exposing (Color, fromRGB, toRGB, toHSL)
+import String exposing (fromFloat, fromInt)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Puppetry.Utilities exposing (..)
 
-import Touch
-import SingleTouch
+import Html.Events.Extra.Touch as Touch
 
 -- MODEL
 
@@ -35,8 +35,8 @@ toText : State -> String
 toText state =
   case state of
     Passive -> "Passive"
-    Setting { dist, angle } -> "Setting dist:"++(toString dist)++" angle:"++(toString angle)
-    Switching { dist, angle } -> "Setting dist:"++(toString dist)++" angle:"++(toString angle)
+    Setting { dist, angle } -> "Setting dist:"++(fromFloat dist)++" angle:"++(fromFloat angle)
+    Switching { dist, angle } -> "Setting dist:"++(fromFloat dist)++" angle:"++(fromFloat angle)
 
 -- VIEW
 
@@ -56,9 +56,9 @@ type alias Config msg =
 view : Config msg -> ColorSelector -> Svg msg
 view config model =
   g [ translate config
-    , SingleTouch.onStart (handleOnChange config model)
-    , SingleTouch.onMove (handleOnChange config model)
-    , SingleTouch.onEnd (handleOnEnd config model)
+    , Touch.onStart (handleOnChange config model)
+    , Touch.onMove (handleOnChange config model)
+    , Touch.onEnd (handleOnEnd config model)
     ] <|
     List.concat
       [ [ circle
@@ -72,13 +72,13 @@ view config model =
 viewButton : Config msg -> ColorSelector -> List (Svg msg)
 viewButton config model =
     [ circle
-      [ r (toString buttonSize)
+      [ r (fromFloat buttonSize)
       , strokeWidth "2"
       , stroke "black"
       , fill (if (model.active) then (colorToCss model.color) else "black")
       ] []
     , circle
-      [ r (toString (buttonSize / 3))
+      [ r (fromFloat (buttonSize / 3))
       , strokeWidth "0"
       , stroke "black"
       , fill (colorToCss model.color)
@@ -91,7 +91,7 @@ viewSelection { color, active, state } =
     Passive -> []
     Switching _ ->
       [ circle
-        [ r (toString (buttonSize * 1.50))
+        [ r (fromFloat (buttonSize * 1.50))
         , strokeWidth "2"
         , stroke "black"
         , fill <| if active then "black" else (colorToCss color)
@@ -101,7 +101,7 @@ viewSelection { color, active, state } =
       let
         choiceCircle =
           [ circle
-            [ r (toString (buttonSize * 1.50))
+            [ r (fromFloat (buttonSize * 1.50))
             , strokeWidth "2"
             , stroke "black"
             , fill (colorToCss (colorFromSelection selection))
@@ -116,7 +116,7 @@ viewSelection { color, active, state } =
                   t = (toFloat i + 0.5) / 12 * 2 * pi
                   x2_ = toPx <| (cos t) * selection.dist
                   y2_ = toPx <| (sin t) * selection.dist
-                  c = Color.hsl f 1 ((selection.dist - buttonSize) / buttonReach)
+                  c = Color.fromHSL (f, 1, ((selection.dist - buttonSize) / buttonReach))
               in
                 Svg.path
                    [ d <| "M " ++ x1_ ++ " " ++ y1_
@@ -135,35 +135,43 @@ viewSelection { color, active, state } =
         ]
 
 toPx : Float -> String
-toPx n = (toString n)
+toPx n = (fromFloat n)
 
 
 
 -- UTILS
 
 translate : Config msg -> Attribute msg
-translate c = transform ("translate("++toString c.x++", "++toString c.y++")")
+translate c = transform ("translate("++fromInt c.x++", "++fromInt c.y++")")
 
-positionFromCoordinates : Config msg -> Touch.Coordinates -> Position
-positionFromCoordinates config coordinates =
+positionFromCoordinates : Config msg -> Touch.Event -> Position
+positionFromCoordinates config event =
   let
-    (x, y) = Touch.clientPos coordinates
+    (x, y) = touchCoordinates event
   in
-    { x = x - (toFloat config.x), y = y - (toFloat config.y) }
+    { x = x - (toFloat config.x)
+    , y = y - (toFloat config.y) 
+    }
 
+touchCoordinates : Touch.Event -> (Float, Float)
+touchCoordinates touchEvent =
+    List.head touchEvent.changedTouches
+        |> Maybe.map .clientPos
+        |> Maybe.withDefault ( 0, 0 )
+        
 
-handleOnChange : Config msg -> ColorSelector -> Touch.Coordinates -> msg
-handleOnChange config model coordinates =
+handleOnChange : Config msg -> ColorSelector -> Touch.Event -> msg
+handleOnChange config model event =
  let
-   p = positionFromCoordinates config coordinates
+   p = positionFromCoordinates config event
    s = selectionFromPosition p
  in
    config.onChange (modelChangeFromSelection s model)
 
-handleOnEnd : Config msg -> ColorSelector -> Touch.Coordinates -> msg
-handleOnEnd config model coordinates =
+handleOnEnd : Config msg -> ColorSelector -> Touch.Event -> msg
+handleOnEnd config model event =
  let
-   p = positionFromCoordinates config coordinates
+   p = positionFromCoordinates config event
    s = selectionFromPosition p
  in
    config.onSelection (modelEndFromSelection s model)
@@ -202,4 +210,4 @@ modelEndFromSelection selection model =
 
 colorFromSelection : Selection -> Color
 colorFromSelection { dist, angle } =
-  Color.hsl angle 1 ((dist - buttonSize)/buttonReach)
+  Color.fromHSL (angle, 1, ((dist - buttonSize)/buttonReach))

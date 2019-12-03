@@ -3,6 +3,7 @@ module Puppetry.Strip exposing (..)
 import Debug exposing (log)
 
 import Svg exposing (..)
+import String exposing (fromFloat)
 import Svg.Attributes exposing (..)
 import Json.Encode as JE
 import Json.Decode as JD exposing (Decoder)
@@ -18,7 +19,7 @@ type alias Strip =
 
 jsValue : Strip -> JE.Value
 jsValue strip =
-  JE.list (List.map Lamp.jsValue strip.activeLamps)
+  JE.list Lamp.jsValue strip.activeLamps
 
 decode : Char -> Int -> Decoder Strip
 decode c i =
@@ -67,10 +68,10 @@ view config strip =
     let lamps = striplampsFromStrip strip
     in g [] <|
         ( line
-               [ x1 (toString config.x1)
-               , y1 (toString config.y1)
-               , x2 (toString config.x2)
-               , y2 (toString config.y2)
+               [ x1 (fromFloat config.x1)
+               , y1 (fromFloat config.y1)
+               , x2 (fromFloat config.x2)
+               , y2 (fromFloat config.y2)
                , strokeWidth "3"
                , stroke "black"
                ] []

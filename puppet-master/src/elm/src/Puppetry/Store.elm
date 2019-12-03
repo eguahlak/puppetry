@@ -1,7 +1,8 @@
 module Puppetry.Store exposing (..)
 
-import Color exposing (Color, rgb)
+import Color exposing (Color, fromRGB)
 import Svg exposing (..)
+import String exposing (fromFloat, fromInt)
 import Svg.Attributes exposing (..)
 import Html.Events exposing (..)
 import Json.Encode as JE
@@ -35,10 +36,10 @@ view config model =
   in
     g []
       [ rect
-        [ x (toString (config.x - buttonWidth/2))
-        , y (toString (config.y - buttonHeight))
-        , width (toString buttonWidth)
-        , height (toString buttonHeight)
+        [ x (fromFloat (config.x - buttonWidth/2))
+        , y (fromFloat (config.y - buttonHeight))
+        , width (fromFloat buttonWidth)
+        , height (fromFloat buttonHeight)
         , strokeWidth "3"
         , stroke "black"
         , fill "green"
@@ -47,10 +48,10 @@ view config model =
         [ text ("L")
         ]
       , rect
-        [ x (toString (config.x - buttonWidth/2))
-        , y (toString (config.y + 30))
-        , width (toString buttonWidth)
-        , height (toString buttonHeight)
+        [ x (fromFloat (config.x - buttonWidth/2))
+        , y (fromFloat (config.y + 30))
+        , width (fromFloat buttonWidth)
+        , height (fromFloat buttonHeight)
         , strokeWidth "3"
         , stroke "black"
         , fill "red"

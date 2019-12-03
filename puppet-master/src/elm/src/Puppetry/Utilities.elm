@@ -1,6 +1,7 @@
 module Puppetry.Utilities exposing (..)
 
-import Color exposing (Color, rgb, toRgb, toHsl)
+import Color exposing (Color, fromRGB, toRGB, toHSL)
+import String exposing (fromFloat)
 import Json.Decode as JD exposing (Decoder)
 
 
@@ -14,15 +15,15 @@ selectionFromPosition { x, y } =
 
 colorToCss : Color -> String
 colorToCss color =
-  let rgb = toRgb color
-  in   "rgb(" ++ toString rgb.red
-       ++ "," ++ toString rgb.green
-       ++ "," ++ toString rgb.blue
+  let (red, green, blue) = toRGB color
+  in   "rgb(" ++ fromFloat red
+       ++ "," ++ fromFloat green
+       ++ "," ++ fromFloat blue
        ++ ")"
 
 decodeColor : Decoder Color
 decodeColor =
-  JD.map3 rgb
-    (JD.field "red" JD.int)
-    (JD.field "green" JD.int)
-    (JD.field "blue" JD.int)
+  JD.map3 (\r g b -> fromRGB (r, g, b))
+    (JD.field "red" JD.float)
+    (JD.field "green" JD.float)
+    (JD.field "blue" JD.float)

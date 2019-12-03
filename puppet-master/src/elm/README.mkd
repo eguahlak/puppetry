@@ -1,0 +1,10 @@
+# Notes 
+
+On update of dependencies run elm2nix from `nixos.elm2nix`.
+
+```
+elm2nix convert > elm-srcs.nix
+elm2nix snapshot > versions.dat
+```
+
+

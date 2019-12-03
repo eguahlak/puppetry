@@ -26,10 +26,12 @@ let
       installPhase = let
         elmfile = module: "${srcdir}/${builtins.replaceStrings ["."] ["/"] module}.elm";
       in ''
-        mkdir -p $out/share/doc
+        ls -l .
+        mkdir -p $out
+        cp -r ${./static}/* $out
         ${lib.concatStrings (map (module: ''
           echo "compiling ${elmfile module}"
-          elm make ${elmfile module} --output $out/${module}.html --docs $out/share/doc/${module}.json
+          elm make ${elmfile module} --output $out/main.js
         '') targets)}
       '';
     };
