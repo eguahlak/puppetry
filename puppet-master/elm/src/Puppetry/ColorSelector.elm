@@ -62,6 +62,7 @@ view config model =
     , Touch.onMove (handleOnChange config model)
     , Touch.onEnd (handleOnEnd config model)
     , Mouse.onOver (handleOnOver config model)
+    , Mouse.onClick (handleOnClick config model)
     ] <|
     List.concat
       [ [ circle
@@ -105,7 +106,7 @@ viewSelection { color, active, state } =
         choiceCircle =
           [ circle
             [ r (fromFloat (buttonSize * 1.50))
-            , strokeWidth "4"
+            , strokeWidth "2"
             , stroke "black"
             , fill (colorToCss (colorFromSelection selection))
             ] []
@@ -113,10 +114,10 @@ viewSelection { color, active, state } =
         colorCircle =
           List.map
             (\i ->
-              let f = (toFloat i - 0.5) / 12 * 2 * pi
+              let f = (toFloat i - 0.5) / 64 * 2 * pi
                   x1_ = toPx <| (cos f) * selection.dist
                   y1_ = toPx <| (sin f) * selection.dist
-                  t = (toFloat i + 0.5) / 12 * 2 * pi
+                  t = (toFloat i + 0.5) / 64 * 2 * pi
                   x2_ = toPx <| (cos t) * selection.dist
                   y2_ = toPx <| (sin t) * selection.dist
                   c = fromHSL (f, 1, ((selection.dist - buttonSize) / buttonReach))
@@ -131,7 +132,7 @@ viewSelection { color, active, state } =
                    , fill "none"
                    ] [ ]
             )
-            (List.range 0 11)
+            (List.range 0 63)
       in List.concat
         [ choiceCircle
         , colorCircle
@@ -164,6 +165,14 @@ handleOnOver config model event =
    s = selectionFromPosition p
  in
    config.onChange (modelChangeFromSelection s model)
+
+handleOnClick : Config msg -> ColorSelector -> Mouse.Event -> msg
+handleOnClick config model event =
+ let
+   p = positionFromCoordinates config event.clientPos
+   s = selectionFromPosition p
+ in
+   config.onSelection (modelEndFromSelection s model)
 
 handleOnChange : Config msg -> ColorSelector -> Touch.Event -> msg
 handleOnChange config model event =
