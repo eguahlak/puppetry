@@ -26,7 +26,6 @@ let
       installPhase = let
         elmfile = module: "${srcdir}/${builtins.replaceStrings ["."] ["/"] module}.elm";
       in ''
-        ls -l .
         mkdir -p $out
         cp -r ${./static}/* $out
         ${lib.concatStrings (map (module: ''
@@ -36,7 +35,7 @@ let
       '';
     };
 in mkDerivation {
-  name = "elm-app-0.1.0";
+  name = "ei-blot-til-lys-0.1.0";
   srcs = ./elm-srcs.nix;
   src = ./.;
   targets = ["Main"];

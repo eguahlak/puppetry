@@ -115,12 +115,12 @@ serialSettings =
   defaultSerialSettings { timeout = 10 };
 
 -- | main is run with
--- puppet-master <port> <usbport> <folder>
+-- puppet-master <port> <usbport> <folder> <saved>
 main :: IO ()
 main = do
-  [strPort, uport, folder] <- getArgs
+  [strPort, uport, folder, saved] <- getArgs
 
-  savedStates' <- initializeSavedStates folder
+  savedStates' <- initializeSavedStates saved
   let state = ClientState exampleState savedStates'
 
   let port = read strPort
@@ -129,23 +129,23 @@ main = do
     then
       withSerial uport serialSettings $ \sp -> do
         stateRef <- Concurrent.newMVar
-          (sInit folder (Just (uport, sp)) state)
-        run port stateRef
+          (sInit saved (Just (uport, sp)) state)
+        run port stateRef folder
     else do
-      stateRef <- Concurrent.newMVar (sInit folder Nothing state)
-      run port stateRef
+      stateRef <- Concurrent.newMVar (sInit saved Nothing state)
+      run port stateRef folder
 
   where
-    run port stateRef =
+    run port stateRef folder =
       Warp.run port $ WS.websocketsOr
         WS.defaultConnectionOptions
         (wsApp stateRef)
-        httpApp
+        (httpApp folder)
 
 
-httpApp :: Wai.Application
-httpApp =
-  WSS.staticApp (WSS.defaultFileServerSettings "public")
+httpApp :: String -> Wai.Application
+httpApp fp =
+  WSS.staticApp (WSS.defaultFileServerSettings fp)
 
 wsApp :: StateRef -> WS.ServerApp
 wsApp stateRef pendingConn = do

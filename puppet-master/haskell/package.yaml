@@ -35,11 +35,11 @@ dependencies:
 #  - blaze-html
 
 library:
-  source-dirs: src/haskell-lib
+  source-dirs: lib
 
 executables:
   puppet-master:
     main: Main.hs
-    source-dirs: src/haskell-app
+    source-dirs: app
     dependencies:
       - puppet-master

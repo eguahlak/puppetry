@@ -20,7 +20,7 @@ mkDerivation {
     filepath free http-types lens mtl safe scotty serialport text unix
     vector wai wai-app-static wai-websockets warp websockets
   ];
-  preConfigure = "hpack";
+  prePatch = "hpack";
   homepage = "https://github.com/eguahlak/puppetry#readme";
   description = "A puppetry webserver";
   license = stdenv.lib.licenses.mit;

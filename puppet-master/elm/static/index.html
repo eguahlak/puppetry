@@ -33,13 +33,13 @@ body {
                 <script>
 document.ontouchmove = function(event) { event.preventDefault(); };
 var app = Elm.Main.init({node: document.getElementById("elm-code-is-loaded-here")});
-var ws = new WebSocket("ws://echo.websocket.org");
+var ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port);
 ws.onmessage = function(msg)
 {
-        console.log(msg);
-        app.ports.websocketIn.send(msg);
+        console.log(msg.data);
+        app.ports.websocketsIn.send(msg.data);
 };
-app.ports.websocketOut.subsribe(function(msg) { ws.send(msg); });
+app.ports.websocketsOut.subscribe(function(msg) { ws.send(msg); });
                 </script>
         </body>
 </html>
