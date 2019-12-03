@@ -1,8 +1,0 @@
-resolver: lts-9.17 
-packages:
-- '.'
-extra-deps: 
-- concurrent-extra-0.7.0.11
-- serialport-0.4.7
-flags: {}
-extra-package-dbs: []
