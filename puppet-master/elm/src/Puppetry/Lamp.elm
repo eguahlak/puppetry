@@ -1,15 +1,15 @@
 module Puppetry.Lamp exposing (..)
 
-import Color exposing (Color, fromRGB, toRGB, toHSL)
 import String exposing (fromFloat)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 import Html.Events exposing (..)
-import Puppetry.Utilities exposing (..)
 import Json.Encode as JE
 import Json.Decode as JD exposing (Decoder)
 
 import Html.Events.Extra.Touch as Touch
+
+import Puppetry.Color exposing (..)
 
 lampRadius : Float
 lampRadius = 10
@@ -20,18 +20,10 @@ type alias Lamp =
   }
 
 jsValue : Lamp -> JE.Value
-jsValue lamp =
-  let
-    ( red, green, blue) = toRGB lamp.color
-  in
-    JE.object
-      [ ("lamp", JE.int lamp.index)
-      , ("color", JE.object
-        [ ("red", JE.float red)
-        , ("green", JE.float green)
-        , ("blue", JE.float blue)
-        ] )
-      ]
+jsValue lamp = JE.object
+    [ ("lamp", JE.int lamp.index)
+    , ("color", encodeColor lamp.color)
+    ]
 
 decode : Decoder Lamp
 decode =
@@ -81,7 +73,7 @@ striplamps lms lst idx st =
                             Just lm ->
                                 lm.color
                             Nothing ->
-                                Color.fromRGB (0, 0, 0)
+                                black
                 in
                     striplamps lms lst (idx - 1)
                         <| add color False (idx - 1) st
@@ -89,16 +81,8 @@ striplamps lms lst idx st =
 interpolate : Lamp -> Lamp -> Int -> Color
 interpolate start end index =
   let
-    (sr, sg, sb) = toRGB start.color
-    (er, eg, eb) = toRGB end.color
-    length = end.index - start.index
-    di = toFloat (index - start.index)
-    dr = (er - sr) / toFloat length
-    dg = (eg - sg) / toFloat length
-    db = (eb - sb) / toFloat length
-  in
-    fromRGB (sr + di*dr, sg + di*dg, sb + di*db)
-
+    delta = toFloat (start.index - index) / toFloat (start.index - end.index) 
+  in Puppetry.Color.interpolate delta start.color end.color
 
 -- View
 
