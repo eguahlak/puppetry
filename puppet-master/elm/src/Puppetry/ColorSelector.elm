@@ -1,12 +1,15 @@
 module Puppetry.ColorSelector exposing (..)
 
-import Color exposing (Color, fromRGB, toRGB, toHSL)
+-- import Color exposing (Color, fromRGB, toRGB, toHSL)
 import String exposing (fromFloat, fromInt)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
-import Puppetry.Utilities exposing (..)
 
 import Html.Events.Extra.Touch as Touch
+import Html.Events.Extra.Mouse as Mouse
+
+import Puppetry.Utilities exposing (..)
+import Puppetry.Color exposing (..)
 
 -- MODEL
 
@@ -28,7 +31,6 @@ init c a =
 type State
   = Passive
   | Setting Selection
-
   | Switching Selection
 
 toText : State -> String
@@ -59,6 +61,8 @@ view config model =
     , Touch.onStart (handleOnChange config model)
     , Touch.onMove (handleOnChange config model)
     , Touch.onEnd (handleOnEnd config model)
+    , Mouse.onOver (handleOnOver config model)
+    , Mouse.onClick (handleOnClick config model)
     ] <|
     List.concat
       [ [ circle
@@ -110,13 +114,13 @@ viewSelection { color, active, state } =
         colorCircle =
           List.map
             (\i ->
-              let f = (toFloat i - 0.5) / 12 * 2 * pi
+              let f = (toFloat i - 0.5) / 64 * 2 * pi
                   x1_ = toPx <| (cos f) * selection.dist
                   y1_ = toPx <| (sin f) * selection.dist
-                  t = (toFloat i + 0.5) / 12 * 2 * pi
+                  t = (toFloat i + 0.5) / 64 * 2 * pi
                   x2_ = toPx <| (cos t) * selection.dist
                   y2_ = toPx <| (sin t) * selection.dist
-                  c = Color.fromHSL (f, 1, ((selection.dist - buttonSize) / buttonReach))
+                  c = fromHSL (f, 1, ((selection.dist - buttonSize) / buttonReach))
               in
                 Svg.path
                    [ d <| "M " ++ x1_ ++ " " ++ y1_
@@ -128,7 +132,7 @@ viewSelection { color, active, state } =
                    , fill "none"
                    ] [ ]
             )
-            (List.range 0 11)
+            (List.range 0 63)
       in List.concat
         [ choiceCircle
         , colorCircle
@@ -137,21 +141,16 @@ viewSelection { color, active, state } =
 toPx : Float -> String
 toPx n = (fromFloat n)
 
-
-
 -- UTILS
 
 translate : Config msg -> Attribute msg
 translate c = transform ("translate("++fromInt c.x++", "++fromInt c.y++")")
 
-positionFromCoordinates : Config msg -> Touch.Event -> Position
-positionFromCoordinates config event =
-  let
-    (x, y) = touchCoordinates event
-  in
-    { x = x - (toFloat config.x)
-    , y = y - (toFloat config.y) 
-    }
+positionFromCoordinates : Config msg -> (Float, Float) -> Position
+positionFromCoordinates config (x, y) =
+        { x = x - (toFloat config.x)
+        , y = y - (toFloat config.y) 
+        }
 
 touchCoordinates : Touch.Event -> (Float, Float)
 touchCoordinates touchEvent =
@@ -159,11 +158,26 @@ touchCoordinates touchEvent =
         |> Maybe.map .clientPos
         |> Maybe.withDefault ( 0, 0 )
         
+handleOnOver : Config msg -> ColorSelector -> Mouse.Event -> msg
+handleOnOver config model event =
+ let
+   p = positionFromCoordinates config event.clientPos
+   s = selectionFromPosition p
+ in
+   config.onChange (modelChangeFromSelection s model)
+
+handleOnClick : Config msg -> ColorSelector -> Mouse.Event -> msg
+handleOnClick config model event =
+ let
+   p = positionFromCoordinates config event.clientPos
+   s = selectionFromPosition p
+ in
+   config.onSelection (modelEndFromSelection s model)
 
 handleOnChange : Config msg -> ColorSelector -> Touch.Event -> msg
 handleOnChange config model event =
  let
-   p = positionFromCoordinates config event
+   p = positionFromCoordinates config (touchCoordinates event)
    s = selectionFromPosition p
  in
    config.onChange (modelChangeFromSelection s model)
@@ -171,7 +185,7 @@ handleOnChange config model event =
 handleOnEnd : Config msg -> ColorSelector -> Touch.Event -> msg
 handleOnEnd config model event =
  let
-   p = positionFromCoordinates config event
+   p = positionFromCoordinates config (touchCoordinates event)
    s = selectionFromPosition p
  in
    config.onSelection (modelEndFromSelection s model)
@@ -210,4 +224,4 @@ modelEndFromSelection selection model =
 
 colorFromSelection : Selection -> Color
 colorFromSelection { dist, angle } =
-  Color.fromHSL (angle, 1, ((dist - buttonSize)/buttonReach))
+  fromHSL (angle, 1, ((dist - buttonSize)/buttonReach))
