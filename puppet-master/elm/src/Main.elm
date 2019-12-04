@@ -5,7 +5,8 @@ import Debug exposing (..)
 -- import Html.App    as App
 import Color exposing (Color, fromRGB)
 import Html exposing (..)
-import Browser
+import Browse
+
 import Platform
 import Json.Decode as JD exposing (Decoder, decodeString)
 import Json.Encode as JE
@@ -20,10 +21,10 @@ import Puppetry.Store as Store exposing (Store)
 
 main : Program () Model Msg
 main =
-  Browser.element 
+  Browser.element
      { init          = init
      , update        = update
-     , view          = view 
+     , view          = view
      , subscriptions = subscriptions
      }
 
@@ -216,7 +217,7 @@ update msg model =
       case model.selectedStripCode of
         Just c ->
           let lights = updateStrip c (\ s ->
-                if sel.active 
+                if sel.active
                 then Strip.setLamp s (Lamp sel.color model.selectedLampIndex)
                 else Strip.removeLamp s model.selectedLampIndex
                 ) model.lights
@@ -226,7 +227,7 @@ update msg model =
             , lights = lights
             }
           , websocketsOut (JE.encode 0 (updateStateTag lights))
-          ) 
+          )
         _ -> ( model , Cmd.none)
     LampClicked stripCode lamp ->
         ( { model
@@ -234,7 +235,7 @@ update msg model =
           , selectedStripCode = Just stripCode
           , selectedLampIndex = lamp.index
           }
-        , Cmd.none) 
+        , Cmd.none)
     SaveStore index ->
       (model, websocketsOut (JE.encode 0 (saveTag index)))
     LoadStore index ->
@@ -254,7 +255,7 @@ updateStrip c fn l =
     _ -> l
 
 subscriptions : Model -> Sub Msg
-subscriptions model = 
+subscriptions model =
   websocketsIn Receive
 
 rgb r g b = fromRGB (r, g, b)
