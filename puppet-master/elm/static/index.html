@@ -27,19 +27,27 @@ body {
         </style>
     </head>
 
-    <body>
-        <div id="elm-code-is-loaded-here"></div>
-        <script src="main.js?date=1"></script>
-        <script>
-            document.ontouchmove = function(event) { event.preventDefault(); };
-var app = Elm.Main.init({node: document.getElementById("elm-code-is-loaded-here")});
-var ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port);
-ws.onmessage = function(msg)
-{
-    console.log(msg.data);
-    app.ports.websocketsIn.send(msg.data);
-};
-app.ports.websocketsOut.subscribe(function(msg) { ws.send(msg); });
-        </script>
-    </body>
+<body>
+    <div id="elm-code-is-loaded-here"></div>
+    <script src="main.js?date=1"></script>
+    <script>
+        document.ontouchmove = function(event) { event.preventDefault(); };
+        var size = {height: window.innerHeight, width: window.innerWidth};
+        var app = Elm.Main.init(
+            { node: document.getElementById("elm-code-is-loaded-here")
+            , flags: size
+            });
+        var ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port);
+        ws.onmessage = function(msg)
+        {
+            // console.log(msg.data);
+            app.ports.websocketsIn.send(msg.data);
+        };
+        app.ports.websocketsOut.subscribe(function(msg) { ws.send(msg); });
+        window.addEventListener('resize', function (event) {
+            var obj = {height: window.innerHeight, width: window.innerWidth};
+            app.ports.resize.send(obj);
+        }, true)
+    </script>
+</body>
 </html>

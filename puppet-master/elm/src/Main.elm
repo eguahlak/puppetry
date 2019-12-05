@@ -5,21 +5,24 @@ import Debug exposing (..)
 -- import Html.App    as App
 import Color exposing (Color, fromRGB)
 import Html exposing (..)
+import Html.Attributes as HA exposing (style)
 import Browser
 
-import Platform
+import Html.Events exposing (onClick)
 import Json.Decode as JD exposing (Decoder, decodeString)
 import Json.Encode as JE
-import Html.Events exposing (onClick)
+import Platform
+import String exposing (fromInt)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 -- import WebSocket
+
 import Puppetry.ColorSelector as ColorSelector exposing (ColorSelector)
 import Puppetry.Lamp as Lamp exposing (Lamp)
 import Puppetry.Strip as Strip exposing (Strip)
 import Puppetry.Store as Store exposing (Store)
 
-main : Program () Model Msg
+main : Program WindowSize Model Msg
 main =
   Browser.element
      { init          = init
@@ -31,6 +34,8 @@ main =
 port websocketsIn  : (String -> msg) -> Sub msg
 port websocketsOut : String -> Cmd msg
 
+port resize : ({ height : Int, width : Int} -> msg) -> Sub msg
+
 type alias Model =
   { selector : ColorSelector
   , lights : LightState
@@ -38,10 +43,12 @@ type alias Model =
   , selectedLampIndex : Int
   , number : Int
   , text : String
+  , windowSize : WindowSize
   }
 
 type Msg
   = Receive String
+  | Resize WindowSize
   | SetActiveLamp ColorSelector
   | SelectionChanged ColorSelector
   | LampClicked Char Lamp.StripLamp
@@ -57,6 +64,11 @@ type alias LightState =
   , rightStrip : Strip
   , proSceneStrip : Strip
   }
+
+type alias WindowSize =
+    { height : Int
+    , width : Int
+    }
 
 type alias PuppetryState =
   { lights: LightState
@@ -100,8 +112,8 @@ decodePuppetry : Decoder PuppetryState
 decodePuppetry =
   JD.map PuppetryState (JD.field "lights" decodeLights)
 
-init : () -> (Model, Cmd Msg)
-init _ =
+init : WindowSize -> (Model, Cmd Msg)
+init size =
   ( { selector = ColorSelector.init (fromRGB (255, 255, 0)) True
     , lights =
       { backSceneStrip = Strip 'B' 26 []
@@ -115,6 +127,7 @@ init _ =
     , selectedLampIndex = 0
     , number = 0
     , text = "Debug information here!"
+    , windowSize = size
     }
   , Cmd.none
   )
@@ -124,9 +137,13 @@ view model =
   let sel c = model.selectedStripCode
         |> Maybe.andThen (\cx -> if cx == c then Just model.selectedLampIndex else Nothing)
   in
-  div []
-    [ svg
-       [ viewBox "0 0 1000 900", width "1000px" ]
+  div [ HA.style "text-align" "center" ]
+    [ svg (
+        [ viewBox "0 0 1000 900"]
+        ++ if model.windowSize.width <= model.windowSize.height
+        then [ width (fromInt model.windowSize.width ++ "px") ]
+        else [ height (fromInt model.windowSize.height ++ "px") ]
+        )
        (
          [ Strip.view
              { x1 = 50.0, y1 = 100.0
@@ -172,7 +189,6 @@ view model =
              } model.selector
          ] ++ (List.map (viewStore 10) (List.range 1 9))
        )
-    , div [] [ Html.text model.text ]
     ]
 
 viewStore: Int -> Int -> Svg Msg
@@ -196,6 +212,8 @@ update msg model =
           ({ model | lights = puppetry.lights }, Cmd.none)
         Err err_msg ->
           ({ model | text = JD.errorToString err_msg }, Cmd.none)
+    Resize size ->
+      ({ model | windowSize = size }, Cmd.none)
     SelectionChanged sel ->
       ({ model | selector = sel }, Cmd.none)
     SetActiveLamp sel ->
@@ -241,6 +259,9 @@ updateStrip c fn l =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-  websocketsIn Receive
+    Sub.batch
+    [ websocketsIn Receive
+    , resize Resize
+    ]
 
 rgb r g b = fromRGB (r, g, b)

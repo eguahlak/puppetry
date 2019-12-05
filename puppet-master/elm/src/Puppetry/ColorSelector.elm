@@ -120,7 +120,7 @@ viewSelection { color, active, state } =
                   t = (toFloat i + 0.5) / 64 * 2 * pi
                   x2_ = toPx <| (cos t) * selection.dist
                   y2_ = toPx <| (sin t) * selection.dist
-                  c = fromHSL (f, 1, ((selection.dist - buttonSize) / buttonReach))
+                  c = fromHSL (f, 1, Basics.min 1 ((selection.dist - buttonSize) / buttonReach))
               in
                 Svg.path
                    [ d <| "M " ++ x1_ ++ " " ++ y1_
@@ -193,7 +193,7 @@ handleOnEnd config model event =
 stateOfSelection : Selection -> State
 stateOfSelection selection =
   if selection.dist < buttonSize then Switching selection
-  else if selection.dist < (buttonSize + buttonReach) then Setting selection
+  else if selection.dist < (buttonSize + buttonReach + 20) then Setting selection
   else Passive
 
 modelChangeFromSelection : Selection -> ColorSelector -> ColorSelector
@@ -224,4 +224,4 @@ modelEndFromSelection selection model =
 
 colorFromSelection : Selection -> Color
 colorFromSelection { dist, angle } =
-  fromHSL (angle, 1, (dist - buttonSize) / buttonReach )
+  fromHSL (angle, 1, Basics.min 1 ((dist - buttonSize) / buttonReach))

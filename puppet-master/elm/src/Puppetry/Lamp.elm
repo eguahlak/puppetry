@@ -56,7 +56,7 @@ striplamps lms lst idx st =
               if lm.index == (idx - 1)
               then
                   striplamps rest (Just lm) (idx - 1)
-                      <| add lm.color True (idx - 1) st
+                  <| add lm.color True (idx - 1) st
               else
                   let color =
                           case lst of
@@ -81,7 +81,7 @@ striplamps lms lst idx st =
 interpolate : Lamp -> Lamp -> Int -> Color
 interpolate start end index =
   let
-    delta = toFloat (start.index - index) / toFloat (start.index - end.index) 
+    delta = toFloat (start.index - index) / toFloat (start.index - end.index)
   in Puppetry.Color.interpolate delta start.color end.color
 
 -- View

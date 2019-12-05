@@ -53,12 +53,12 @@ black = Color.fromRGB (0, 0, 0)
 interpolate : Float -> Color -> Color -> Color
 interpolate delta from to =
   let
-    (sr, sg, sb) = Color.toRGB from
-    (er, eg, eb) = Color.toRGB to
+    (sr, sg, sb) = Color.toHSL from
+    (er, eg, eb) = Color.toHSL to
     dr = er - sr
     dg = eg - sg
     db = eb - sb
   in
-    Color.fromRGB (sr + delta * dr, sg + delta * dg, sb + delta *db)
+    Color.fromHSL (sr + delta * dr, sg + delta * dg, sb + delta *db)
 
 
