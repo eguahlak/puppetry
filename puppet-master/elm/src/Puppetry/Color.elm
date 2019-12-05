@@ -31,20 +31,19 @@ colorToCss = Color.toRGBString
 
 decodeColor : D.Decoder Color
 decodeColor =
-  D.map3 (\r g b -> Color.fromRGB (r, g, b))
-    (D.field "red" D.float)
-    (D.field "green" D.float)
-    (D.field "blue" D.float)
+  D.map3 (\r g b -> Color.fromRGB (toFloat r, toFloat g, toFloat b))
+    (D.field "red" D.int)
+    (D.field "green" D.int)
+    (D.field "blue" D.int)
 
 encodeColor : Color -> E.Value
 encodeColor c = 
     let (r, g, b) = Color.toRGB c
     in E.object 
-        [ ("red", E.float r) 
-        , ("green", E.float g)
-        , ("blue", E.float b)
+        [ ("red", E.int (round r) ) 
+        , ("green", E.int (round g) )
+        , ("blue", E.int (round b) )
         ]
-
 
 black : Color
 black = Color.fromRGB (0, 0, 0)
