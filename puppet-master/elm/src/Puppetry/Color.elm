@@ -1,6 +1,6 @@
--- | This is the Color module. All the interesting information 
+-- | This is the Color module. All the interesting information
 -- about colors are located here.
-module Puppetry.Color exposing 
+module Puppetry.Color exposing
   ( Color
   , fromHSL
   , colorToCss
@@ -37,10 +37,10 @@ decodeColor =
     (D.field "blue" D.int)
 
 encodeColor : Color -> E.Value
-encodeColor c = 
+encodeColor c =
     let (r, g, b) = Color.toRGB c
-    in E.object 
-        [ ("red", E.int (round r) ) 
+    in E.object
+        [ ("red", E.int (round r) )
         , ("green", E.int (round g) )
         , ("blue", E.int (round b) )
         ]
@@ -49,14 +49,14 @@ black : Color
 black = Color.fromRGB (0, 0, 0)
 
 -- | Given a float in [0,1], and two colors A and B, return a color linearly
--- interpolated between them on the RGB scale 
+-- interpolated between them on the RGB scale
 interpolate : Float -> Color -> Color -> Color
 interpolate delta from to =
   let
     (sr, sg, sb) = Color.toRGB from
     (er, eg, eb) = Color.toRGB to
-    dr = er - sr 
-    dg = eg - sg 
+    dr = er - sr
+    dg = eg - sg
     db = eb - sb
   in
     Color.fromRGB (sr + delta * dr, sg + delta * dg, sb + delta *db)

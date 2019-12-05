@@ -149,7 +149,7 @@ translate c = transform ("translate("++fromInt c.x++", "++fromInt c.y++")")
 positionFromCoordinates : Config msg -> (Float, Float) -> Position
 positionFromCoordinates config (x, y) =
         { x = x - (toFloat config.x)
-        , y = y - (toFloat config.y) 
+        , y = y - (toFloat config.y)
         }
 
 touchCoordinates : Touch.Event -> (Float, Float)
@@ -157,7 +157,7 @@ touchCoordinates touchEvent =
     List.head touchEvent.changedTouches
         |> Maybe.map .clientPos
         |> Maybe.withDefault ( 0, 0 )
-        
+
 handleOnOver : Config msg -> ColorSelector -> Mouse.Event -> msg
 handleOnOver config model event =
  let
@@ -224,4 +224,4 @@ modelEndFromSelection selection model =
 
 colorFromSelection : Selection -> Color
 colorFromSelection { dist, angle } =
-  fromHSL (angle, 1, ((dist - buttonSize)/buttonReach))
+  fromHSL (angle, 1, (dist - buttonSize) / buttonReach )

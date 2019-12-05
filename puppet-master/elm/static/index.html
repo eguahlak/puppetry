@@ -1,45 +1,45 @@
 <!DOCTYPE html>
 <html>
-        <head>
-                <link rel="stylesheet"
-                      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <head>
+        <link rel="stylesheet"
+              href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+        <meta http-equiv="cache-control" content="no-cache" />
 
-                <!-- android -->
-                <meta name="mobile-web-app-capable" content="yes">
-                <!-- iOS -->
-                <meta name="apple-mobile-web-app-capable" content="yes">
-                <meta name="apple-mobile-web-app-status-bar-style" content="translucent-black">
-                <meta name="apple-mobile-web-app-title" content="Ei Blot Til Lyst">
-                <meta name="viewport"
-                      content="width=device-width,height=device-height,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+        <!-- android -->
+        <meta name="mobile-web-app-capable" content="yes">
+        <!-- iOS -->
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="translucent-black">
+        <meta name="apple-mobile-web-app-title" content="Ei Blot Til Lys">
+        <meta name="viewport"
+              content="width=device-width,height=device-height,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
 
-                <style>
+        <style>
 body {
-        background-color: #535760;
+    background-color: #535760;
 }
          #message {
-                 text-align: center;
-                 color: #90939A;
-                 font-family: verdana;
-                 font-size: 16px;
+             text-align: center;
+             color: #90939A;
+             font-family: verdana;
+             font-size: 16px;
          }
-                </style>
-        </head>
+        </style>
+    </head>
 
-        <body>
-                <div id="elm-code-is-loaded-here"></div>
-
-                <script src="main.js?date=1"></script>
-                <script>
-document.ontouchmove = function(event) { event.preventDefault(); };
+    <body>
+        <div id="elm-code-is-loaded-here"></div>
+        <script src="main.js?date=1"></script>
+        <script>
+            document.ontouchmove = function(event) { event.preventDefault(); };
 var app = Elm.Main.init({node: document.getElementById("elm-code-is-loaded-here")});
 var ws = new WebSocket("ws://" + window.location.hostname + ":" + window.location.port);
 ws.onmessage = function(msg)
 {
-        console.log(msg.data);
-        app.ports.websocketsIn.send(msg.data);
+    console.log(msg.data);
+    app.ports.websocketsIn.send(msg.data);
 };
 app.ports.websocketsOut.subscribe(function(msg) { ws.send(msg); });
-                </script>
-        </body>
+        </script>
+    </body>
 </html>
