@@ -5,7 +5,7 @@ import Debug exposing (..)
 -- import Html.App    as App
 import Color exposing (Color, fromRGB)
 import Html exposing (..)
-import Browse
+import Browser
 
 import Platform
 import Json.Decode as JD exposing (Decoder, decodeString)
