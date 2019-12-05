@@ -125,82 +125,67 @@ view model =
         |> Maybe.andThen (\cx -> if cx == c then Just model.selectedLampIndex else Nothing)
   in
   div []
-    [ svg [ viewBox "0 0 1000 900", width "1000px" ]
-       [ Strip.view
-           { x1 = 50.0, y1 = 100.0
-           , x2 = 950.0, y2 = 100.0
-           , onLampClick = LampClicked
-           , selected = sel 'F'
-           } model.lights.frontSceneStrip
-       , Strip.view
-           { x1 = 75.0, y1 = 150.0
-           , x2 = 925.0, y2 = 150.0
-           , onLampClick = LampClicked
-           , selected = sel 'M'
-           } model.lights.middleSceneStrip
-       , Strip.view
-           { x1 = 100.0, y1 = 200.0
-           , x2 = 900.0, y2 = 200.0
-           , onLampClick = LampClicked
-           , selected = sel 'B'
-           } model.lights.backSceneStrip
-       , Strip.view
-           { x1 = 125.0, y1 = 650.0
-           , x2 = 875.0, y2 = 650.0
-           , onLampClick = LampClicked
-           , selected = sel 'P'
-           } model.lights.proSceneStrip
-       , Strip.view
-           { x1 = 75.0, y1 = 550.0
-           , x2 = 75.0, y2 = 350.0
-           , onLampClick = LampClicked
-           , selected = sel 'L'
-           } model.lights.leftStrip
-       , Strip.view
-           { x1 = 925.0, y1 = 550.0
-           , x2 = 925.0, y2 = 350.0
-           , onLampClick = LampClicked
-           , selected = sel 'R'
-           } model.lights.rightStrip
-       , ColorSelector.view
-           { x = 500
-           , y = 400
-           , onChange = SelectionChanged
-           , onSelection = SetActiveLamp
-           } model.selector
-       , Store.view
-           { x = 500
-           , y = 730
-           , onClickSave = \s -> SaveStore s.index
-           , onClickLoad = \s -> LoadStore s.index
-           } (Store (rgb 255 100 100) False 7 )
-       , Store.view
-           { x = 300
-           , y = 730
-           , onClickSave = \s -> SaveStore s.index
-           , onClickLoad = \s -> LoadStore s.index
-           } (Store (rgb 255 100 100) False 21 )
-       , Store.view
-           { x = 400
-           , y = 730
-           , onClickSave = \s -> SaveStore s.index
-           , onClickLoad = \s -> LoadStore s.index
-           } (Store (rgb 255 100 100) False 3923 )
-       , Store.view
-           { x = 600
-           , y = 730
-           , onClickSave = \s -> SaveStore s.index
-           , onClickLoad = \s -> LoadStore s.index
-           } (Store (rgb 255 100 100) False 3 )
-       , Store.view
-           { x = 700
-           , y = 730
-           , onClickSave = \s -> SaveStore s.index
-           , onClickLoad = \s -> LoadStore s.index
-           } (Store (rgb 255 100 100) False 594 )
-       ]
+    [ svg
+       [ viewBox "0 0 1000 900", width "1000px" ]
+       (
+         [ Strip.view
+             { x1 = 50.0, y1 = 100.0
+             , x2 = 950.0, y2 = 100.0
+             , onLampClick = LampClicked
+             , selected = sel 'F'
+             } model.lights.frontSceneStrip
+         , Strip.view
+             { x1 = 75.0, y1 = 150.0
+             , x2 = 925.0, y2 = 150.0
+             , onLampClick = LampClicked
+             , selected = sel 'M'
+             } model.lights.middleSceneStrip
+         , Strip.view
+             { x1 = 100.0, y1 = 200.0
+             , x2 = 900.0, y2 = 200.0
+             , onLampClick = LampClicked
+             , selected = sel 'B'
+             } model.lights.backSceneStrip
+         , Strip.view
+             { x1 = 125.0, y1 = 650.0
+             , x2 = 875.0, y2 = 650.0
+             , onLampClick = LampClicked
+             , selected = sel 'P'
+             } model.lights.proSceneStrip
+         , Strip.view
+             { x1 = 75.0, y1 = 550.0
+             , x2 = 75.0, y2 = 350.0
+             , onLampClick = LampClicked
+             , selected = sel 'L'
+             } model.lights.leftStrip
+         , Strip.view
+             { x1 = 925.0, y1 = 550.0
+             , x2 = 925.0, y2 = 350.0
+             , onLampClick = LampClicked
+             , selected = sel 'R'
+             } model.lights.rightStrip
+         , ColorSelector.view
+             { x = 500
+             , y = 400
+             , onChange = SelectionChanged
+             , onSelection = SetActiveLamp
+             } model.selector
+         ] ++ (List.map (viewStore 10) (List.range 1 9))
+       )
     , div [] [ Html.text model.text ]
     ]
+
+viewStore: Int -> Int -> Svg Msg
+viewStore l index=
+  let
+    (xValue, yValue) = (100.0 + toFloat(index*800)/toFloat(l), 730.0)
+  in
+    Store.view
+       { x = xValue
+       , y = yValue
+       , onClickSave = \s -> SaveStore s.index
+       , onClickLoad = \s -> LoadStore s.index
+       } (Store (rgb 255 100 100) False index )
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
