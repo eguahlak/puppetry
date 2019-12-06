@@ -55,7 +55,7 @@ type State
 
 buttonSize : Float
 buttonSize =
-    20
+    40
 
 
 buttonReach : Float
@@ -124,15 +124,66 @@ view { config, selection } =
         [ translate config ]
     <|
         List.concat
-            [ [ circle
-                    [ r "150"
-                    , fillOpacity "0"
-                    ]
-                    []
-              ]
+            [ viewColorCircle
+
+            --, viewButton config selection
             , viewSelection selection
-            , viewButton config selection
             ]
+
+
+viewColorCircle : List (Svg msg)
+viewColorCircle =
+    List.concat <|
+        List.map
+            (\x ->
+                List.map
+                    (\i ->
+                        viewColorCircleSquare
+                            (toFloat x / 12 * buttonReach)
+                            (toFloat i / 64)
+                            (1.0 / 64)
+                    )
+                    (List.range 0 64)
+            )
+            (List.range 1 12)
+
+
+viewColorCircleSquare : Float -> Float -> Float -> Svg msg
+viewColorCircleSquare dist m delta =
+    let
+        x1_ =
+            toPx <| cos ((m - delta / 2) * 2 * pi) * (dist + buttonSize)
+
+        y1_ =
+            toPx <| sin ((m - delta / 2) * 2 * pi) * (dist + buttonSize)
+
+        x2_ =
+            toPx <| cos ((m + delta / 2) * 2 * pi) * (dist + buttonSize)
+
+        y2_ =
+            toPx <| sin ((m + delta / 2) * 2 * pi) * (dist + buttonSize)
+
+        c =
+            fromHSL ( m * 2 * pi, 1, Basics.min 1 (dist / buttonReach) )
+    in
+    Svg.path
+        [ d <|
+            String.join " "
+                [ "M " ++ x1_ ++ " " ++ y1_
+                , String.join " "
+                    [ "A"
+                    , toPx (dist + buttonSize)
+                    , toPx (dist + buttonSize)
+                    , "0 0 1"
+                    , x2_
+                    , y2_
+                    ]
+                ]
+        , stroke (colorToCss c)
+        , strokeWidth "5"
+        , fill "none"
+        ]
+        []
 
 
 viewButton : Config msg -> ColorSelector -> List (Svg msg)
@@ -168,7 +219,7 @@ viewSelection { color, active, state } =
 
         Switching _ ->
             [ circle
-                [ r (fromFloat (buttonSize * 1.5))
+                [ r (fromFloat buttonSize)
                 , strokeWidth "2"
                 , stroke "black"
                 , fill <|
@@ -185,7 +236,7 @@ viewSelection { color, active, state } =
             let
                 choiceCircle =
                     [ circle
-                        [ r (fromFloat (buttonSize * 1.5))
+                        [ r (fromFloat buttonSize)
                         , strokeWidth "2"
                         , stroke "black"
                         , fill (colorToCss (colorFromSelection selection))

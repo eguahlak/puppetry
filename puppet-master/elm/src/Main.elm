@@ -148,7 +148,7 @@ init : Window.WindowSize -> ( Model, Cmd Msg )
 init size =
     ( { selector =
             ColorSelector.init
-                { x = 500, y = 450, onSelection = SetActiveLamp }
+                { x = 500, y = 425, onSelection = SetActiveLamp }
                 (fromRGB ( 0, 0, 0 ))
                 False
       , lights =
@@ -247,14 +247,13 @@ view : Model -> Html Msg
 view model =
     div []
         [ Window.view model.window
-            ([ circle
-                [ cx (fromFloat model.mousePos.x)
-                , cy (fromFloat model.mousePos.y)
-                , r "20"
-                ]
-                []
-             ]
-                ++ viewStripList model
+            --   [ circle
+            --   [ cx (fromFloat model.mousePos.x)
+            --   , cy (fromFloat model.mousePos.y)
+            --   , r "20"
+            --   ]
+            --   [] ]
+            (viewStripList model
                 ++ [ ColorSelector.view model.selector ]
                 ++ List.map (viewStore model 10) (List.range 1 9)
             )
