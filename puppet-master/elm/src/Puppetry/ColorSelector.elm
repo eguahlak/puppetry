@@ -229,7 +229,6 @@ viewSelection { color, active, state } =
                                         ++ " "
                                         ++ toPx selection.dist
                                         ++ " 0 0 1 "
-                                        ++ " "
                                         ++ x2_
                                         ++ " "
                                         ++ y2_

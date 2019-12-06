@@ -149,8 +149,8 @@ init size =
     ( { selector =
             ColorSelector.init
                 { x = 500, y = 450, onSelection = SetActiveLamp }
-                (fromRGB ( 255, 255, 0 ))
-                True
+                (fromRGB ( 0, 0, 0 ))
+                False
       , lights =
             { backSceneStrip = Strip 'B' 26 []
             , middleSceneStrip = Strip 'M' 26 []
@@ -343,13 +343,36 @@ update msg model =
                     ( { model | mousePos = pos, selector = selector }, Cmd.none )
 
         LampClicked stripCode lamp ->
-            ( { model
-                | selector = ColorSelector.setSelection lamp.color lamp.active model.selector
-                , selectedStripCode = Just stripCode
-                , selectedLampIndex = lamp.index
-              }
-            , Cmd.none
-            )
+            if
+                lamp.index
+                    == model.selectedLampIndex
+                    && Just stripCode
+                    == model.selectedStripCode
+            then
+                ( { model
+                    | selector = ColorSelector.setSelection Color.black False model.selector
+                    , selectedStripCode = Nothing
+                    , selectedLampIndex = lamp.index
+                    , lights =
+                        updateStrip stripCode
+                            (\s -> Strip.removeLamp s lamp.index)
+                            model.lights
+                  }
+                , Cmd.none
+                )
+
+            else
+                ( { model
+                    | selector = ColorSelector.setSelection lamp.color True model.selector
+                    , selectedStripCode = Just stripCode
+                    , selectedLampIndex = lamp.index
+                    , lights =
+                        updateStrip stripCode
+                            (\s -> Strip.setLamp s (Lamp lamp.color lamp.index))
+                            model.lights
+                  }
+                , Cmd.none
+                )
 
         SaveStore index ->
             ( model, websocketsOut (JE.encode 0 (saveTag index)) )
