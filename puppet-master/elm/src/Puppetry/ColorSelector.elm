@@ -49,19 +49,6 @@ type State
     | Switching Selection
 
 
-toText : State -> String
-toText state =
-    case state of
-        Passive ->
-            "Passive"
-
-        Setting { dist, angle } ->
-            "Setting dist:" ++ fromFloat dist ++ " angle:" ++ fromFloat angle
-
-        Switching { dist, angle } ->
-            "Setting dist:" ++ fromFloat dist ++ " angle:" ++ fromFloat angle
-
-
 
 -- VIEW
 
@@ -91,6 +78,18 @@ inputMoved pos model =
                 (selectionFromPosition model.config pos)
                 model.selection
     }
+
+
+inputUp : Position -> Model msg -> ( Model msg, Bool )
+inputUp pos model =
+    ( { model
+        | selection =
+            modelEndFromSelection
+                (selectionFromPosition model.config pos)
+                model.selection
+      }
+    , True
+    )
 
 
 setSelection : Color -> Bool -> Model msg -> Model msg
@@ -285,11 +284,7 @@ modelChangeFromSelection selection model =
             { model | state = Passive }
 
         Setting sel ->
-            { model
-                | state = Setting sel
-
-                -- , color = colorFromSelection sel
-            }
+            { model | state = Setting sel }
 
         Switching sel ->
             { model | state = Switching sel }
@@ -302,16 +297,10 @@ modelEndFromSelection selection model =
             { model | state = Passive }
 
         Setting sel ->
-            { model
-                | state = Passive
-                , color = colorFromSelection sel
-            }
+            { model | state = Passive, color = colorFromSelection sel }
 
         Switching _ ->
-            { model
-                | state = Passive
-                , active = not model.active
-            }
+            { model | state = Passive, active = not model.active }
 
 
 colorFromSelection : Selection -> Color

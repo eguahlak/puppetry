@@ -281,27 +281,16 @@ update msg model =
             , Cmd.none
             )
 
-        {--
-        MovePosition pos ->
-            ( { model
-              | selector = (ColorSelector.move pos)
-              }
-            , Cmd.none
-            )
-
-        UpPosition pos ->
+        InputUp pos ->
             let
-              (sel, action) = ColorSelector.up pos
+                ( selector, choice ) =
+                    ColorSelector.inputUp pos model.selector
+
+                sel =
+                    selector.selection
             in
-            ( { model
-              | selector = sel)
-              }
-            , Cmd SetActiveLamp sel
-            )
---}
-        SetActiveLamp sel ->
-            case model.selectedStripCode of
-                Just c ->
+            case ( model.selectedStripCode, choice ) of
+                ( Just c, True ) ->
                     let
                         lights =
                             updateStrip c
@@ -327,7 +316,7 @@ update msg model =
                     )
 
                 _ ->
-                    ( model, Cmd.none )
+                    ( { model | mousePos = pos, selector = selector }, Cmd.none )
 
         LampClicked stripCode lamp ->
             ( { model
