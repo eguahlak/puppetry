@@ -1,15 +1,11 @@
 port module Main exposing (main)
 
--- import Html.App    as App
-
 import Browser
 import Color exposing (Color, fromRGB)
 import Debug exposing (..)
 import Html exposing (..)
 import Html.Attributes as HA exposing (style)
 import Html.Events exposing (onClick)
-import Html.Events.Extra.Mouse as Mouse
-import Html.Events.Extra.Touch as Touch
 import Json.Decode as JD exposing (Decoder, decodeString)
 import Json.Encode as JE
 import Platform
@@ -18,12 +14,13 @@ import Puppetry.Lamp as Lamp exposing (Lamp)
 import Puppetry.Store as Store exposing (Store)
 import Puppetry.Strip as Strip exposing (Strip)
 import Puppetry.Utilities exposing (..)
+import Puppetry.Window as Window
 import String exposing (fromFloat, fromInt)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 
 
-main : Program WindowSize Model Msg
+main : Program Window.WindowSize Model Msg
 main =
     Browser.element
         { init = init
@@ -39,7 +36,7 @@ port websocketsIn : (String -> msg) -> Sub msg
 port websocketsOut : String -> Cmd msg
 
 
-port resize : ({ height : Int, width : Int } -> msg) -> Sub msg
+port resize : (Window.WindowSize -> msg) -> Sub msg
 
 
 type alias Model =
@@ -49,17 +46,18 @@ type alias Model =
     , selectedLampIndex : Int
     , number : Int
     , text : String
-    , windowSize : WindowSize
+    , window : Window.Model Msg
     , mousePos : Position
     }
 
 
 type Msg
     = Receive String
-    | Resize WindowSize
+    | Resize Window.WindowSize
     | SetActiveLamp ColorSelector
     | SelectionChanged ColorSelector
-    | SetPosition Position
+    | InputMoved Position
+    | InputUp Position
     | LampClicked Char Lamp.StripLamp
     | SaveStore Int
     | LoadStore Int
@@ -76,9 +74,9 @@ type alias LightState =
     }
 
 
-type alias WindowSize =
-    { height : Int
-    , width : Int
+type alias WindowProportions =
+    { proportion : Float
+    , indent : Float
     }
 
 
@@ -131,7 +129,7 @@ decodePuppetry =
     JD.map PuppetryState (JD.field "lights" decodeLights)
 
 
-init : WindowSize -> ( Model, Cmd Msg )
+init : Window.WindowSize -> ( Model, Cmd Msg )
 init size =
     ( { selector = ColorSelector.init (fromRGB ( 255, 255, 0 )) True
       , lights =
@@ -146,18 +144,12 @@ init size =
       , selectedLampIndex = 0
       , number = 0
       , text = "Debug information here!"
-      , windowSize = size
+      , window =
+            Window.Model size (Window.Square 1000 1000) InputMoved InputUp
       , mousePos = { x = 0, y = 0 }
       }
     , Cmd.none
     )
-
-
-touchCoordinates : Touch.Event -> ( Float, Float )
-touchCoordinates touchEvent =
-    List.head touchEvent.changedTouches
-        |> Maybe.map .clientPos
-        |> Maybe.withDefault ( 0, 0 )
 
 
 view : Model -> Html Msg
@@ -174,37 +166,8 @@ view model =
                             Nothing
                     )
     in
-    div [ HA.style "text-align" "center" ]
-        [ svg
-            ([ viewBox "0 0 1000 900"
-             , width (fromInt model.windowSize.width ++ "px")
-             , Mouse.onMove
-                (\m ->
-                    let
-                        ( x, y ) =
-                            m.clientPos
-                    in
-                    SetPosition
-                        { x = x / (toFloat model.windowSize.width / 1000)
-                        , y = y / (toFloat model.windowSize.width / 1000)
-                        }
-                )
-             , Touch.onMove
-                (\m ->
-                    let
-                        ( x, y ) =
-                            touchCoordinates m
-                    in
-                    SetPosition
-                        { x = x / (toFloat model.windowSize.width / 1000)
-                        , y = y / (toFloat model.windowSize.width / 1000)
-                        }
-                )
-             ]
-             -- ++ if model.windowSize.width <= model.windowSize.height
-             --then [ ]
-             -- else [ height (fromInt model.windowSize.height ++ "px") ]
-            )
+    div []
+        [ Window.view model.window
             ([ circle
                 [ cx (fromFloat model.mousePos.x)
                 , cy (fromFloat model.mousePos.y)
@@ -308,11 +271,12 @@ update msg model =
                     ( { model | text = JD.errorToString err_msg }, Cmd.none )
 
         Resize size ->
-            ( { model | windowSize = size }, Cmd.none )
+            ( { model | window = Window.resize size model.window }, Cmd.none )
 
-        SetPosition pos ->
+        InputMoved pos ->
             ( { model | mousePos = pos }, Cmd.none )
-{--
+
+        {--
         MovePosition pos ->
             ( { model
               | selector = (ColorSelector.move pos)
