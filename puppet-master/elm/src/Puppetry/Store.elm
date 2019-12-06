@@ -1,10 +1,10 @@
 module Puppetry.Store exposing (..)
 
-import Color exposing (Color, fromRGB)
 import Html.Events exposing (..)
 import Html.Events.Extra.Touch as Touch
 import Json.Decode as JD exposing (Decoder)
 import Json.Encode as JE
+import Puppetry.Color exposing (..)
 import String exposing (fromFloat, fromInt)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
@@ -25,8 +25,7 @@ buttonHeight =
 
 
 type alias Store =
-    { color : Color
-    , active : Bool
+    { color : Maybe Color
     , index : Int
     }
 
@@ -34,6 +33,7 @@ type alias Store =
 type alias StoreConfig msg =
     { x : Float
     , y : Float
+    , active : Bool
     , onClickSave : Store -> msg
     , onClickLoad : Store -> msg
     }
@@ -42,39 +42,38 @@ type alias StoreConfig msg =
 view : StoreConfig msg -> Store -> Svg msg
 view config model =
     let
-        frame =
-            if model.active then
-                "red"
+        circleColor =
+            (case model.color of
+                Just c ->
+                    [ fill (colorToCss c) ]
 
-            else
-                "blue"
+                Nothing ->
+                    [ fillOpacity "0" ]
+            )
+                ++ (if config.active then
+                        [ strokeWidth "4"
+                        , stroke "white"
+                        , onClick (config.onClickSave model)
+                        , Touch.onEnd (\a -> config.onClickSave model)
+                        ]
+
+                    else
+                        [ strokeWidth "2"
+                        , stroke "black"
+                        , onClick (config.onClickLoad model)
+                        , Touch.onEnd (\a -> config.onClickLoad model)
+                        ]
+                   )
     in
     g []
-        [ rect
-            [ x (fromFloat (config.x - buttonWidth / 2))
-            , y (fromFloat (config.y - buttonHeight))
-            , width (fromFloat buttonWidth)
-            , height (fromFloat buttonHeight)
-            , strokeWidth "3"
-            , stroke "black"
-            , fill "green"
-            , onClick (config.onClickLoad model)
-            , Touch.onEnd (handleClickLoad config model)
-            ]
-            [ text "L"
-            ]
-        , rect
-            [ x (fromFloat (config.x - buttonWidth / 2))
-            , y (fromFloat (config.y + 30))
-            , width (fromFloat buttonWidth)
-            , height (fromFloat buttonHeight)
-            , strokeWidth "3"
-            , stroke "black"
-            , fill "red"
-            , onClick (config.onClickSave model)
-            , Touch.onEnd (handleClickSave config model)
-            ]
-            [ text "S"
+        [ circle
+            ([ cx (fromFloat config.x)
+             , cy (fromFloat config.y)
+             , r "20"
+             ]
+                ++ circleColor
+            )
+            [ text (fromInt model.index)
             ]
         ]
 
@@ -83,7 +82,7 @@ handleClickSave : StoreConfig msg -> Store -> Touch.Event -> msg
 handleClickSave config model _ =
     config.onClickSave model
 
+
 handleClickLoad : StoreConfig msg -> Store -> Touch.Event -> msg
 handleClickLoad config model _ =
     config.onClickLoad model
-    

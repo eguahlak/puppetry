@@ -3,19 +3,21 @@ port module Main exposing (main)
 import Browser
 import Color exposing (Color, fromRGB)
 import Debug exposing (..)
+import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes as HA exposing (style)
 import Html.Events exposing (onClick)
 import Json.Decode as JD exposing (Decoder, decodeString)
 import Json.Encode as JE
 import Platform
+import Puppetry.Color as Color
 import Puppetry.ColorSelector as ColorSelector exposing (ColorSelector)
 import Puppetry.Lamp as Lamp exposing (Lamp)
 import Puppetry.Store as Store exposing (Store)
 import Puppetry.Strip as Strip exposing (Strip)
 import Puppetry.Utilities exposing (..)
 import Puppetry.Window as Window
-import String exposing (fromFloat, fromInt)
+import String exposing (fromFloat, fromInt, toInt)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 
@@ -41,10 +43,11 @@ port resize : (Window.WindowSize -> msg) -> Sub msg
 
 type alias Model =
     { selector : ColorSelector.Model Msg
+    , savedStates : Dict Int Color
     , lights : LightState
+    , activeState : Int
     , selectedStripCode : Maybe Char
     , selectedLampIndex : Int
-    , number : Int
     , text : String
     , window : Window.Model Msg
     , mousePos : Position
@@ -81,6 +84,8 @@ type alias WindowProportions =
 
 type alias PuppetryState =
     { lights : LightState
+    , savedStates : Dict Int Color
+    , activeState : Int
     }
 
 
@@ -125,7 +130,18 @@ decodeLights =
 
 decodePuppetry : Decoder PuppetryState
 decodePuppetry =
-    JD.map PuppetryState (JD.field "lights" decodeLights)
+    JD.map3 PuppetryState
+        (JD.field "lights" decodeLights)
+        (JD.map
+            (\i ->
+                Dict.fromList <|
+                    List.filterMap (\( a, b ) -> toInt a |> Maybe.map (\x -> ( x, b ))) i
+            )
+         <|
+            JD.field "savedStates"
+                (JD.keyValuePairs Color.decodeColor)
+        )
+        (JD.field "activeState" JD.int)
 
 
 init : Window.WindowSize -> ( Model, Cmd Msg )
@@ -143,9 +159,10 @@ init size =
             , leftStrip = Strip 'L' 6 []
             , rightStrip = Strip 'R' 6 []
             }
+      , savedStates = Dict.empty
       , selectedStripCode = Nothing
       , selectedLampIndex = 0
-      , number = 0
+      , activeState = 1
       , text = "Debug information here!"
       , window =
             Window.Model size (Window.Square 1000 900) InputMoved InputUp
@@ -239,13 +256,13 @@ view model =
              ]
                 ++ viewStripList model
                 ++ [ ColorSelector.view model.selector ]
-                ++ List.map (viewStore 10) (List.range 1 9)
+                ++ List.map (viewStore model 10) (List.range 1 9)
             )
         ]
 
 
-viewStore : Int -> Int -> Svg Msg
-viewStore l index =
+viewStore : Model -> Int -> Int -> Svg Msg
+viewStore { activeState, savedStates } l index =
     let
         ( xValue, yValue ) =
             ( 100.0 + toFloat (index * 800) / toFloat l, 730.0 )
@@ -253,10 +270,11 @@ viewStore l index =
     Store.view
         { x = xValue
         , y = yValue
+        , active = activeState == index
         , onClickSave = \s -> SaveStore s.index
         , onClickLoad = \s -> LoadStore s.index
         }
-        (Store (rgb 255 100 100) False index)
+        (Store (Dict.get index savedStates) index)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -265,7 +283,13 @@ update msg model =
         Receive json ->
             case decodeString decodePuppetry (log "received" json) of
                 Ok puppetry ->
-                    ( { model | lights = puppetry.lights }, Cmd.none )
+                    ( { model
+                        | lights = puppetry.lights
+                        , savedStates = puppetry.savedStates
+                        , activeState = puppetry.activeState
+                      }
+                    , Cmd.none
+                    )
 
                 Err err_msg ->
                     ( { model | text = JD.errorToString err_msg }, Cmd.none )

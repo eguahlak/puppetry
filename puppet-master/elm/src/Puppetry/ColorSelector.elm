@@ -55,12 +55,12 @@ type State
 
 buttonSize : Float
 buttonSize =
-    40
+    20
 
 
 buttonReach : Float
 buttonReach =
-    200
+    120
 
 
 type alias Config msg =
@@ -82,13 +82,16 @@ inputMoved pos model =
 
 inputUp : Position -> Model msg -> ( Model msg, Bool )
 inputUp pos model =
-    ( { model
-        | selection =
+    let
+        ( sel, x ) =
             modelEndFromSelection
                 (selectionFromPosition model.config pos)
                 model.selection
+    in
+    ( { model
+        | selection = sel
       }
-    , True
+    , x
     )
 
 
@@ -148,7 +151,7 @@ viewButton config model =
         ]
         []
     , circle
-        [ r (fromFloat (buttonSize / 3))
+        [ r (fromFloat (buttonSize / 2.5))
         , strokeWidth "0"
         , stroke "black"
         , fill (colorToCss model.color)
@@ -290,17 +293,17 @@ modelChangeFromSelection selection model =
             { model | state = Switching sel }
 
 
-modelEndFromSelection : Selection -> ColorSelector -> ColorSelector
+modelEndFromSelection : Selection -> ColorSelector -> ( ColorSelector, Bool )
 modelEndFromSelection selection model =
     case stateOfSelection selection of
         Passive ->
-            { model | state = Passive }
+            ( { model | state = Passive }, False )
 
         Setting sel ->
-            { model | state = Passive, color = colorFromSelection sel }
+            ( { model | state = Passive, color = colorFromSelection sel }, True )
 
         Switching _ ->
-            { model | state = Passive, active = not model.active }
+            ( { model | state = Passive, active = not model.active }, True )
 
 
 colorFromSelection : Selection -> Color

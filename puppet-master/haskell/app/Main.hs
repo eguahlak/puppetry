@@ -55,6 +55,7 @@ type Client   = (ClientId, WS.Connection)
 data ClientState = ClientState
   { _lights      :: !State
   , _savedStates :: !(Map.Map Int Color)
+  , _activeState :: !Int
   } deriving (Generic)
 
 dropOne :: Options
@@ -105,11 +106,7 @@ initializeSavedStates folder = do
 
 sInit :: FilePath -> Maybe (FilePath, SerialPort) -> ClientState -> ServerState
 sInit fp sp cst =
-  ServerState
-    []
-    fp
-    sp
-    cst
+  ServerState [] fp sp cst
 
 serialSettings :: SerialPortSettings
 serialSettings =
@@ -122,7 +119,7 @@ main = do
   [strPort, uport, folder, saved] <- getArgs
 
   savedStates' <- initializeSavedStates saved
-  let state = ClientState exampleState savedStates'
+  let state = ClientState exampleState savedStates' 0
 
   let port = read strPort
   putStrLn $ "Starting puppet-master at " ++ show port
@@ -184,14 +181,16 @@ listen client = do
               case state' of
                 Left err -> do
                   liftIO . putStrLn $
-                    "Could not load " ++ show no ++ ": " ++ err
-                  clientState.savedStates.at no .= Just (average emptyState)
+                    "(WARNING) Could not load " ++ show no ++ ": " ++ err
+                  clientState.activeState .= no
                   updateState emptyState
                 Right state -> do
                   clientState.savedStates.at no .= Just (average state)
+                  clientState.activeState .= no
                   updateState state
-            Save no ->
+            Save no -> do
               saveState no =<< use (clientState.lights)
+              refreshStates
       Left err -> do
         liftIO $ putStrLn ("Error in conversion: " ++ err)
 
@@ -199,6 +198,9 @@ listen client = do
     updateState lights' = do
       clientState.lights .= lights'
       printState
+      refreshStates
+
+    refreshStates = do
       state <- use clientState
       clients <- use clientList
       liftIO $ multisend state clients
@@ -207,7 +209,10 @@ loadState :: Int -> Puppetry (Either String State)
 loadState i = do
   file <- getSaveFile i
   liftIO
-    . Exception.handle (\(_ :: Exception.IOException) -> return $ Left $ "No such file: " ++ file)
+    . Exception.handle (
+        \(_ :: Exception.IOException)
+        -> return $ Left $ "No such file: " ++ file
+        )
     $ eitherDecode' <$> BL.readFile file
 
 saveState :: Int -> State -> Puppetry ()
