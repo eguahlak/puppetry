@@ -44,13 +44,18 @@ type alias Model msg =
 view : Model msg -> List (Svg msg) -> Html msg
 view model =
     svg
-        [ viewBox ("0 0 " ++ fromFloat model.scale.width ++ " " ++ fromFloat model.scale.height)
+        [ viewBox (calculateViewBox model)
         , width (fromFloat model.window.width ++ "px")
-        , Mouse.onMove (\m -> model.onInputMoved <| calculatePosition model m.clientPos)
-        , Mouse.onClick (\m -> model.onInputSelected <| calculatePosition model m.clientPos)
-        , Touch.onMove (\m -> model.onInputMoved <| calculatePosition model (touchCoordinates m))
-        , Touch.onStart (\m -> model.onInputMoved <| calculatePosition model (touchCoordinates m))
-        , Touch.onEnd (\m -> model.onInputSelected <| calculatePosition model (touchCoordinates m))
+        , Mouse.onMove
+            (\m -> model.onInputMoved <| calculatePosition model m.clientPos)
+        , Mouse.onClick
+            (\m -> model.onInputSelected <| calculatePosition model m.clientPos)
+        , Touch.onMove
+            (\m -> model.onInputMoved <| calculatePosition model (touchCoordinates m))
+        , Touch.onStart
+            (\m -> model.onInputMoved <| calculatePosition model (touchCoordinates m))
+        , Touch.onEnd
+            (\m -> model.onInputSelected <| calculatePosition model (touchCoordinates m))
         ]
 
 
@@ -74,9 +79,28 @@ touchCoordinates touchEvent =
         |> Maybe.withDefault ( 0, 0 )
 
 
+calculateViewBox : Model msg -> String
+calculateViewBox { scale, window } =
+    if window.width * scale.height <= window.height * scale.width then
+        "0 0 " ++ fromFloat scale.width ++ " " ++ fromFloat scale.height
+
+    else
+        let
+            scalar =
+                window.width / window.height
+
+            -- * (scale.width / scale.height)
+        in
+        fromFloat (-((scale.height * scalar) - scale.width) / 2)
+            ++ " 0 "
+            ++ fromFloat (scale.height * scalar)
+            ++ " "
+            ++ fromFloat scale.height
+
+
 calculatePosition : Model msg -> ( Float, Float ) -> Position
 calculatePosition { window, scale } ( x, y ) =
-    if window.width * scale.height >= window.height * scale.width then
+    if window.width * scale.height <= window.height * scale.width then
         let
             scalar =
                 scale.width / window.width
@@ -86,6 +110,16 @@ calculatePosition { window, scale } ( x, y ) =
         }
 
     else
-        { x = x
-        , y = y
+        let
+            scalar =
+                scale.height / window.height
+
+            scalarZ =
+                (window.width / window.height) * (scale.height / scale.width)
+
+            nz =
+                scale.width * (1 - scalarZ) / 2
+        in
+        { x = x * scalar + nz
+        , y = y * scalar
         }

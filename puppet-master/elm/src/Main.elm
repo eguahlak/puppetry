@@ -40,7 +40,7 @@ port resize : (Window.WindowSize -> msg) -> Sub msg
 
 
 type alias Model =
-    { selector : ColorSelector
+    { selector : ColorSelector.Model Msg
     , lights : LightState
     , selectedStripCode : Maybe Char
     , selectedLampIndex : Int
@@ -55,7 +55,6 @@ type Msg
     = Receive String
     | Resize Window.WindowSize
     | SetActiveLamp ColorSelector
-    | SelectionChanged ColorSelector
     | InputMoved Position
     | InputUp Position
     | LampClicked Char Lamp.StripLamp
@@ -131,7 +130,11 @@ decodePuppetry =
 
 init : Window.WindowSize -> ( Model, Cmd Msg )
 init size =
-    ( { selector = ColorSelector.init (fromRGB ( 255, 255, 0 )) True
+    ( { selector =
+            ColorSelector.init
+                { x = 500, y = 450, onSelection = SetActiveLamp }
+                (fromRGB ( 255, 255, 0 ))
+                True
       , lights =
             { backSceneStrip = Strip 'B' 26 []
             , middleSceneStrip = Strip 'M' 26 []
@@ -145,15 +148,15 @@ init size =
       , number = 0
       , text = "Debug information here!"
       , window =
-            Window.Model size (Window.Square 1000 1000) InputMoved InputUp
+            Window.Model size (Window.Square 1000 900) InputMoved InputUp
       , mousePos = { x = 0, y = 0 }
       }
     , Cmd.none
     )
 
 
-view : Model -> Html Msg
-view model =
+viewStripList : Model -> List (Svg Msg)
+viewStripList model =
     let
         sel c =
             model.selectedStripCode
@@ -166,79 +169,76 @@ view model =
                             Nothing
                     )
     in
+    [ Strip.view
+        { x1 = 50.0
+        , y1 = 100.0
+        , x2 = 950.0
+        , y2 = 100.0
+        , onLampClick = LampClicked
+        , selected = sel 'F'
+        }
+        model.lights.frontSceneStrip
+    , Strip.view
+        { x1 = 75.0
+        , y1 = 150.0
+        , x2 = 925.0
+        , y2 = 150.0
+        , onLampClick = LampClicked
+        , selected = sel 'M'
+        }
+        model.lights.middleSceneStrip
+    , Strip.view
+        { x1 = 100.0
+        , y1 = 200.0
+        , x2 = 900.0
+        , y2 = 200.0
+        , onLampClick = LampClicked
+        , selected = sel 'B'
+        }
+        model.lights.backSceneStrip
+    , Strip.view
+        { x1 = 125.0
+        , y1 = 650.0
+        , x2 = 875.0
+        , y2 = 650.0
+        , onLampClick = LampClicked
+        , selected = sel 'P'
+        }
+        model.lights.proSceneStrip
+    , Strip.view
+        { x1 = 75.0
+        , y1 = 550.0
+        , x2 = 75.0
+        , y2 = 350.0
+        , onLampClick = LampClicked
+        , selected = sel 'L'
+        }
+        model.lights.leftStrip
+    , Strip.view
+        { x1 = 925.0
+        , y1 = 550.0
+        , x2 = 925.0
+        , y2 = 350.0
+        , onLampClick = LampClicked
+        , selected = sel 'R'
+        }
+        model.lights.rightStrip
+    ]
+
+
+view : Model -> Html Msg
+view model =
     div []
         [ Window.view model.window
             ([ circle
                 [ cx (fromFloat model.mousePos.x)
                 , cy (fromFloat model.mousePos.y)
                 , r "20"
-
-                -- , fill
-                -- , fillOpacity (fromFloat opacity)
                 ]
                 []
-             , Strip.view
-                { x1 = 50.0
-                , y1 = 100.0
-                , x2 = 950.0
-                , y2 = 100.0
-                , onLampClick = LampClicked
-                , selected = sel 'F'
-                }
-                model.lights.frontSceneStrip
-             , Strip.view
-                { x1 = 75.0
-                , y1 = 150.0
-                , x2 = 925.0
-                , y2 = 150.0
-                , onLampClick = LampClicked
-                , selected = sel 'M'
-                }
-                model.lights.middleSceneStrip
-             , Strip.view
-                { x1 = 100.0
-                , y1 = 200.0
-                , x2 = 900.0
-                , y2 = 200.0
-                , onLampClick = LampClicked
-                , selected = sel 'B'
-                }
-                model.lights.backSceneStrip
-             , Strip.view
-                { x1 = 125.0
-                , y1 = 650.0
-                , x2 = 875.0
-                , y2 = 650.0
-                , onLampClick = LampClicked
-                , selected = sel 'P'
-                }
-                model.lights.proSceneStrip
-             , Strip.view
-                { x1 = 75.0
-                , y1 = 550.0
-                , x2 = 75.0
-                , y2 = 350.0
-                , onLampClick = LampClicked
-                , selected = sel 'L'
-                }
-                model.lights.leftStrip
-             , Strip.view
-                { x1 = 925.0
-                , y1 = 550.0
-                , x2 = 925.0
-                , y2 = 350.0
-                , onLampClick = LampClicked
-                , selected = sel 'R'
-                }
-                model.lights.rightStrip
-             , ColorSelector.view
-                { x = 500
-                , y = 400
-                , onChange = SelectionChanged
-                , onSelection = SetActiveLamp
-                }
-                model.selector
              ]
+                ++ viewStripList model
+                ++ [ ColorSelector.view model.selector ]
                 ++ List.map (viewStore 10) (List.range 1 9)
             )
         ]
@@ -274,7 +274,12 @@ update msg model =
             ( { model | window = Window.resize size model.window }, Cmd.none )
 
         InputMoved pos ->
-            ( { model | mousePos = pos }, Cmd.none )
+            ( { model
+                | mousePos = pos
+                , selector = ColorSelector.inputMoved pos model.selector
+              }
+            , Cmd.none
+            )
 
         {--
         MovePosition pos ->
@@ -294,9 +299,6 @@ update msg model =
             , Cmd SetActiveLamp sel
             )
 --}
-        SelectionChanged sel ->
-            ( { model | selector = sel }, Cmd.none )
-
         SetActiveLamp sel ->
             case model.selectedStripCode of
                 Just c ->
@@ -313,7 +315,12 @@ update msg model =
                                 model.lights
                     in
                     ( { model
-                        | selector = sel
+                        | selector =
+                            let
+                                s =
+                                    model.selector
+                            in
+                            { s | selection = sel }
                         , lights = lights
                       }
                     , websocketsOut (JE.encode 0 (updateStateTag lights))
@@ -324,7 +331,7 @@ update msg model =
 
         LampClicked stripCode lamp ->
             ( { model
-                | selector = ColorSelector.init lamp.color lamp.active
+                | selector = ColorSelector.setSelection lamp.color lamp.active model.selector
                 , selectedStripCode = Just stripCode
                 , selectedLampIndex = lamp.index
               }

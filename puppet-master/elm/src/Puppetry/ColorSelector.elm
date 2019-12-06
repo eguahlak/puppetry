@@ -15,6 +15,12 @@ import Svg.Attributes exposing (..)
 -- MODEL
 
 
+type alias Model msg =
+    { selection : ColorSelector
+    , config : Config msg
+    }
+
+
 type alias ColorSelector =
     { color : Color
     , active : Bool
@@ -22,11 +28,14 @@ type alias ColorSelector =
     }
 
 
-init : Color -> Bool -> ColorSelector
-init c a =
-    { color = c
-    , active = a
-    , state = Passive
+init : Config msg -> Color -> Bool -> Model msg
+init config c a =
+    { config = config
+    , selection =
+        { color = c
+        , active = a
+        , state = Passive
+        }
     }
 
 
@@ -68,23 +77,49 @@ buttonReach =
 
 
 type alias Config msg =
-    { x : Int
-    , y : Int
-    , onChange : ColorSelector -> msg
+    { x : Float
+    , y : Float
     , onSelection : ColorSelector -> msg
     }
 
 
-view : Config msg -> ColorSelector -> Svg msg
-view config model =
+inputMoved : Position -> Model msg -> Model msg
+inputMoved pos model =
+    { model
+        | selection =
+            modelChangeFromSelection
+                (selectionFromPosition model.config pos)
+                model.selection
+    }
+
+
+setSelection : Color -> Bool -> Model msg -> Model msg
+setSelection color bool model =
+    { model
+        | selection = ColorSelector color bool Passive
+    }
+
+
+type alias Selection =
+    { dist : Float, angle : Float }
+
+
+selectionFromPosition : Config msg -> Position -> Selection
+selectionFromPosition config pos =
+    let
+        x =
+            pos.x - config.x
+
+        y =
+            pos.y - config.y
+    in
+    Selection (sqrt (x ^ 2 + y ^ 2)) (atan2 y x)
+
+
+view : Model msg -> Svg msg
+view { config, selection } =
     g
-        [ translate config
-        , Touch.onStart (handleOnChange config model)
-        , Touch.onMove (handleOnChange config model)
-        , Touch.onEnd (handleOnEnd config model)
-        , Mouse.onOver (handleOnOver config model)
-        , Mouse.onClick (handleOnClick config model)
-        ]
+        [ translate config ]
     <|
         List.concat
             [ [ circle
@@ -93,8 +128,8 @@ view config model =
                     ]
                     []
               ]
-            , viewSelection model
-            , viewButton config model
+            , viewSelection selection
+            , viewButton config selection
             ]
 
 
@@ -221,14 +256,7 @@ toPx n =
 
 translate : Config msg -> Attribute msg
 translate c =
-    transform ("translate(" ++ fromInt c.x ++ ", " ++ fromInt c.y ++ ")")
-
-
-positionFromCoordinates : Config msg -> ( Float, Float ) -> Position
-positionFromCoordinates config ( x, y ) =
-    { x = x - toFloat config.x
-    , y = y - toFloat config.y
-    }
+    transform ("translate(" ++ fromFloat c.x ++ ", " ++ fromFloat c.y ++ ")")
 
 
 touchCoordinates : Touch.Event -> ( Float, Float )
@@ -236,54 +264,6 @@ touchCoordinates touchEvent =
     List.head touchEvent.changedTouches
         |> Maybe.map .clientPos
         |> Maybe.withDefault ( 0, 0 )
-
-
-handleOnOver : Config msg -> ColorSelector -> Mouse.Event -> msg
-handleOnOver config model event =
-    let
-        p =
-            positionFromCoordinates config event.clientPos
-
-        s =
-            selectionFromPosition p
-    in
-    config.onChange (modelChangeFromSelection s model)
-
-
-handleOnClick : Config msg -> ColorSelector -> Mouse.Event -> msg
-handleOnClick config model event =
-    let
-        p =
-            positionFromCoordinates config event.clientPos
-
-        s =
-            selectionFromPosition p
-    in
-    config.onSelection (modelEndFromSelection s model)
-
-
-handleOnChange : Config msg -> ColorSelector -> Touch.Event -> msg
-handleOnChange config model event =
-    let
-        p =
-            positionFromCoordinates config (touchCoordinates event)
-
-        s =
-            selectionFromPosition p
-    in
-    config.onChange (modelChangeFromSelection s model)
-
-
-handleOnEnd : Config msg -> ColorSelector -> Touch.Event -> msg
-handleOnEnd config model event =
-    let
-        p =
-            positionFromCoordinates config (touchCoordinates event)
-
-        s =
-            selectionFromPosition p
-    in
-    config.onSelection (modelEndFromSelection s model)
 
 
 stateOfSelection : Selection -> State
