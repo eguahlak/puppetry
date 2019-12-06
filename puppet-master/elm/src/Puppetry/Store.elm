@@ -2,6 +2,7 @@ module Puppetry.Store exposing (..)
 
 import Color exposing (Color, fromRGB)
 import Html.Events exposing (..)
+import Html.Events.Extra.Touch as Touch
 import Json.Decode as JD exposing (Decoder)
 import Json.Encode as JE
 import String exposing (fromFloat, fromInt)
@@ -58,6 +59,7 @@ view config model =
             , stroke "black"
             , fill "green"
             , onClick (config.onClickLoad model)
+            , Touch.onEnd (handleClickLoad config model)
             ]
             [ text "L"
             ]
@@ -70,7 +72,18 @@ view config model =
             , stroke "black"
             , fill "red"
             , onClick (config.onClickSave model)
+            , Touch.onEnd (handleClickSave config model)
             ]
             [ text "S"
             ]
         ]
+
+
+handleClickSave : StoreConfig msg -> Store -> Touch.Event -> msg
+handleClickSave config model _ =
+    config.onClickSave model
+
+handleClickLoad : StoreConfig msg -> Store -> Touch.Event -> msg
+handleClickLoad config model _ =
+    config.onClickLoad model
+    
