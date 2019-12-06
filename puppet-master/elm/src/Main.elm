@@ -312,7 +312,24 @@ update msg model =
 
         SetPosition pos ->
             ( { model | mousePos = pos }, Cmd.none )
+{--
+        MovePosition pos ->
+            ( { model
+              | selector = (ColorSelector.move pos)
+              }
+            , Cmd.none
+            )
 
+        UpPosition pos ->
+            let
+              (sel, action) = ColorSelector.up pos
+            in
+            ( { model
+              | selector = sel)
+              }
+            , Cmd SetActiveLamp sel
+            )
+--}
         SelectionChanged sel ->
             ( { model | selector = sel }, Cmd.none )
 
