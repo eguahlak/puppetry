@@ -378,7 +378,9 @@ update msg model =
             ( model, websocketsOut (JE.encode 0 (saveTag index)) )
 
         LoadStore index ->
-            ( model, websocketsOut (JE.encode 0 (loadTag index)) )
+            ( { model | selectedStripCode = Nothing }
+            , websocketsOut (JE.encode 0 (loadTag index))
+            )
 
         _ ->
             ( model, Cmd.none )
