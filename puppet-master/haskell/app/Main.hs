@@ -33,6 +33,7 @@ import           Data.Aeson hiding ((.=))
 import qualified Data.List                      as List
 import           Data.Semigroup                 hiding ((<>))
 import qualified Network.Wai                    as Wai
+import WaiAppStatic.Types
 import qualified Network.Wai.Application.Static as WSS
 import qualified Network.Wai.Handler.Warp       as Warp
 import qualified Network.Wai.Handler.WebSockets as WS
@@ -145,7 +146,7 @@ main = do
 
 httpApp :: String -> Wai.Application
 httpApp fp =
-  WSS.staticApp (WSS.defaultFileServerSettings fp)
+  WSS.staticApp (WSS.defaultFileServerSettings fp) { WSS.ssMaxAge = MaxAgeSeconds 1 }
 
 wsApp :: StateRef -> WS.ServerApp
 wsApp stateRef pendingConn = do
