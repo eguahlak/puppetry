@@ -348,16 +348,19 @@ update msg model =
                     && Just stripCode
                     == model.selectedStripCode
             then
+                let
+                    lights =
+                        updateStrip stripCode
+                            (\s -> Strip.removeLamp s lamp.index)
+                            model.lights
+                in
                 ( { model
                     | selector = ColorSelector.setSelection Color.black False model.selector
                     , selectedStripCode = Nothing
                     , selectedLampIndex = lamp.index
-                    , lights =
-                        updateStrip stripCode
-                            (\s -> Strip.removeLamp s lamp.index)
-                            model.lights
+                    , lights = lights
                   }
-                , Cmd.none
+                , websocketsOut (JE.encode 0 (updateStateTag lights))
                 )
 
             else

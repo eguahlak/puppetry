@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveGeneric         #-}
 {-# LANGUAGE FlexibleInstances     #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings     #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TemplateHaskell       #-}
@@ -56,6 +57,7 @@ data ClientState = ClientState
   { _lights      :: !State
   , _savedStates :: !(Map.Map Int Color)
   , _activeState :: !Int
+  , _scale       :: Color
   } deriving (Generic)
 
 dropOne :: Options
@@ -119,7 +121,7 @@ main = do
   [strPort, uport, folder, saved] <- getArgs
 
   savedStates' <- initializeSavedStates saved
-  let state = ClientState exampleState savedStates' 0
+  let state = ClientState exampleState savedStates' 0 (Color 255 255 255 255)
 
   let port = read strPort
   putStrLn $ "Starting puppet-master at " ++ show port
@@ -159,6 +161,7 @@ data Protocol
   = Save !Int
   | Load !Int
   | UpdateState !State
+  | SetScale !Color
   deriving (Show, Read, Generic)
 
 instance FromJSON Protocol
@@ -191,14 +194,18 @@ listen client = do
             Save no -> do
               saveState no =<< use (clientState.lights)
               refreshStates
+            SetScale col -> do
+              clientState.scale .= col
+              printState
+              refreshStates
       Left err -> do
         liftIO $ putStrLn ("Error in conversion: " ++ err)
 
   where
     updateState lights' = do
       clientState.lights .= lights'
-      printState
       refreshStates
+      printState
 
     refreshStates = do
       state <- use clientState
@@ -229,20 +236,15 @@ getSaveFile i = do
 printState :: Puppetry ()
 printState = do
     s <- use (clientState.lights)
-    p <- use serialport
+    scl <- use (clientState.scale)
     liftIO $ do
-      transfer stdout s
-    case p of
+      transfer scl stdout s
+    use serialport >>= \case
       Nothing -> return ()
       Just (_, sp) ->
         liftIO $ do
-            transferS s sp
-            readToBang sp
-          -- h <- hOpenSerial p'
-          -- transfer h s
-          -- str <- readToBang h
-          -- putStrLn $ "Response: '" ++ str ++ "'"
-          -- hClose h
+          transferS scl s sp
+          readToBang sp
 
 -- | Receive data from the client
 recv :: FromJSON a => Client -> IO (Either String a)

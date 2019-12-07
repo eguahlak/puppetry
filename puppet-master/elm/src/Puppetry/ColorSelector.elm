@@ -135,10 +135,10 @@ viewColorCircle : List (Svg msg)
 viewColorCircle =
     let
         w =
-            10
+            18
 
         h =
-            5
+            4
     in
     List.concat <|
         List.map
@@ -153,7 +153,7 @@ viewColorCircle =
                     )
                     (List.range 0 w)
             )
-            (List.range 1 h)
+            (List.range 0 h)
 
 
 viewColorCircleSquare : Float -> Float -> Float -> Float -> Svg msg

@@ -43,13 +43,13 @@ stateToString s =
   let str = (map ((++ "\n") . lampToString) $ toLampList s) ++ [ "!" ];
   in intercalate "" str
 
-transferS :: State -> SerialPort -> IO ()
-transferS state sp = do
+transferS :: Color -> State -> SerialPort -> IO ()
+transferS col state sp = do
   _ <- send sp (B.pack $ stateToString state)
   flush sp
 
-transfer :: Handle -> State -> IO ()
-transfer h sts = do
+transfer :: Color -> Handle -> State -> IO ()
+transfer col h sts = do
   hPutStr h $ stateToString sts
   hFlush h
 
