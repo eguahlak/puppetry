@@ -133,55 +133,74 @@ view { config, selection } =
 
 viewColorCircle : List (Svg msg)
 viewColorCircle =
+    let
+        w =
+            10
+
+        h =
+            5
+    in
     List.concat <|
         List.map
             (\x ->
                 List.map
                     (\i ->
                         viewColorCircleSquare
-                            (toFloat x / 12 * buttonReach)
-                            (toFloat i / 64)
-                            (1.0 / 64)
+                            (toFloat x / h * buttonReach)
+                            (buttonReach / h)
+                            (toFloat i / w)
+                            (1.0 / w)
                     )
-                    (List.range 0 64)
+                    (List.range 0 w)
             )
-            (List.range 1 12)
+            (List.range 1 h)
 
 
-viewColorCircleSquare : Float -> Float -> Float -> Svg msg
-viewColorCircleSquare dist m delta =
+viewColorCircleSquare : Float -> Float -> Float -> Float -> Svg msg
+viewColorCircleSquare dist ddelta m delta =
     let
-        x1_ =
-            toPx <| cos ((m - delta / 2) * 2 * pi) * (dist + buttonSize)
+        dist_ =
+            dist + buttonSize
 
-        y1_ =
-            toPx <| sin ((m - delta / 2) * 2 * pi) * (dist + buttonSize)
+        mkP deg l =
+            { x = cos (deg * 2 * pi) * l
+            , y = sin (deg * 2 * pi) * l
+            }
 
-        x2_ =
-            toPx <| cos ((m + delta / 2) * 2 * pi) * (dist + buttonSize)
+        p1 =
+            mkP (m - delta / 2) (dist_ - ddelta / 2)
 
-        y2_ =
-            toPx <| sin ((m + delta / 2) * 2 * pi) * (dist + buttonSize)
+        p2 =
+            mkP (m + delta / 2) (dist_ - ddelta / 2)
+
+        p3 =
+            mkP (m - delta / 2) (dist_ + ddelta / 2)
+
+        p4 =
+            mkP (m + delta / 2) (dist_ + ddelta / 2)
 
         c =
             fromHSL ( m * 2 * pi, 1, Basics.min 1 (dist / buttonReach) )
+
+        pA r d { x, y } =
+            String.join " " [ "A", toPx d, toPx d, "0 0", r, toPx x, toPx y ]
+
+        pM { x, y } =
+            String.join " " [ "M", toPx x, toPx y ]
+
+        pL { x, y } =
+            String.join " " [ "L", toPx x, toPx y ]
     in
     Svg.path
         [ d <|
             String.join " "
-                [ "M " ++ x1_ ++ " " ++ y1_
-                , String.join " "
-                    [ "A"
-                    , toPx (dist + buttonSize)
-                    , toPx (dist + buttonSize)
-                    , "0 0 1"
-                    , x2_
-                    , y2_
-                    ]
+                [ pM p1
+                , pA "1" (dist_ - ddelta / 2) p2
+                , pL p4
+                , pA "0" (dist_ + ddelta / 2) p3
+                , "Z"
                 ]
-        , stroke (colorToCss c)
-        , strokeWidth "5"
-        , fill "none"
+        , fill (colorToCss c)
         ]
         []
 
@@ -233,68 +252,14 @@ viewSelection { color, active, state } =
             ]
 
         Setting selection ->
-            let
-                choiceCircle =
-                    [ circle
-                        [ r (fromFloat buttonSize)
-                        , strokeWidth "2"
-                        , stroke "black"
-                        , fill (colorToCss (colorFromSelection selection))
-                        ]
-                        []
-                    ]
-
-                colorCircle =
-                    List.map
-                        (\i ->
-                            let
-                                f =
-                                    (toFloat i - 0.5) / 64 * 2 * pi
-
-                                x1_ =
-                                    toPx <| cos f * selection.dist
-
-                                y1_ =
-                                    toPx <| sin f * selection.dist
-
-                                t =
-                                    (toFloat i + 0.5) / 64 * 2 * pi
-
-                                x2_ =
-                                    toPx <| cos t * selection.dist
-
-                                y2_ =
-                                    toPx <| sin t * selection.dist
-
-                                c =
-                                    fromHSL ( f, 1, Basics.min 1 ((selection.dist - buttonSize) / buttonReach) )
-                            in
-                            Svg.path
-                                [ d <|
-                                    "M "
-                                        ++ x1_
-                                        ++ " "
-                                        ++ y1_
-                                        ++ "A "
-                                        ++ toPx selection.dist
-                                        ++ " "
-                                        ++ toPx selection.dist
-                                        ++ " 0 0 1 "
-                                        ++ x2_
-                                        ++ " "
-                                        ++ y2_
-                                , stroke (colorToCss c)
-                                , strokeWidth "5"
-                                , fill "none"
-                                ]
-                                []
-                        )
-                        (List.range 0 63)
-            in
-            List.concat
-                [ choiceCircle
-                , colorCircle
+            [ circle
+                [ r (fromFloat buttonSize)
+                , strokeWidth "2"
+                , stroke "black"
+                , fill (colorToCss (colorFromSelection selection))
                 ]
+                []
+            ]
 
 
 toPx : Float -> String
