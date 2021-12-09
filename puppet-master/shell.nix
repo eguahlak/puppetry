@@ -1,2 +1,2 @@
 { pkgs ? import <nixpkgs> {} }:
-pkgs.haskellPackages.mkGhcidShell ./default.nix {}
+pkgs.haskellPackages.callPackage ./default.nix {}

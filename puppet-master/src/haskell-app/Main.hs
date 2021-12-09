@@ -5,9 +5,11 @@
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TemplateHaskell       #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE LambdaCase  #-}
 
 module Main where
 
+import Paths_puppet_master as Paths
 
 -- directory
 import           System.Directory
@@ -118,34 +120,38 @@ serialSettings =
 -- puppet-master <port> <usbport> <folder>
 main :: IO ()
 main = do
-  [strPort, uport, folder] <- getArgs
+  getArgs >>= \case
+    [strPort, uport, folder] -> do
+      savedStates' <- initializeSavedStates folder
+      let state = ClientState exampleState savedStates'
 
-  savedStates' <- initializeSavedStates folder
-  let state = ClientState exampleState savedStates'
-
-  let port = read strPort
-  putStrLn $ "Starting puppet-master at " ++ show port
-  if uport /= "-"
-    then
-      withSerial uport serialSettings $ \sp -> do
-        stateRef <- Concurrent.newMVar
-          (sInit folder (Just (uport, sp)) state)
-        run port stateRef
-    else do
-      stateRef <- Concurrent.newMVar (sInit folder Nothing state)
-      run port stateRef
+      let port = read strPort
+      putStrLn $ "Starting puppet-master at " ++ show port
+      if uport /= "-"
+        then
+          withSerial uport serialSettings $ \sp -> do
+            stateRef <- Concurrent.newMVar
+              (sInit folder (Just (uport, sp)) state)
+            run port stateRef
+        else do
+          stateRef <- Concurrent.newMVar (sInit folder Nothing state)
+          run port stateRef
+    _ -> putStrLn "puppet-master <port> <usbport> <folder>"
 
   where
-    run port stateRef =
+    run port stateRef = do
+      -- fp <- Paths.getDataDir
+      fp <- canonicalizePath "public"
+      putStrLn $ "Serving: " <> fp
       Warp.run port $ WS.websocketsOr
         WS.defaultConnectionOptions
         (wsApp stateRef)
-        httpApp
+        (httpApp fp)
 
 
-httpApp :: Wai.Application
-httpApp =
-  WSS.staticApp (WSS.defaultFileServerSettings "public")
+httpApp :: FilePath -> Wai.Application
+httpApp fp =
+  WSS.staticApp (WSS.defaultFileServerSettings fp)
 
 wsApp :: StateRef -> WS.ServerApp
 wsApp stateRef pendingConn = do

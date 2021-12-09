@@ -34,6 +34,9 @@ dependencies:
 #  - scotty
 #  - blaze-html
 
+data-dir: public/
+data-files: public/*
+
 library:
   source-dirs: src/haskell-lib
 
