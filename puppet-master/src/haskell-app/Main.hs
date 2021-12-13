@@ -117,7 +117,7 @@ serialSettings =
   defaultSerialSettings { timeout = 10 };
 
 -- | main is run with
--- puppet-master <port> <usbport> <folder>
+-- puppet-master <port> <usbport> <save-states-folder>
 main :: IO ()
 main = do
   getArgs >>= \case
@@ -136,7 +136,7 @@ main = do
         else do
           stateRef <- Concurrent.newMVar (sInit folder Nothing state)
           run port stateRef
-    _ -> putStrLn "puppet-master <port> <usbport> <folder>"
+    _ -> putStrLn "puppet-master <port> <usbport> <saved-states-folder>"
 
   where
     run port stateRef = do
