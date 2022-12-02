@@ -11,6 +11,7 @@ module Puppetry.Color
   , cBlue
 
   , averageColor
+  , dimColor
   ) where
 
 -- aseon
@@ -41,6 +42,14 @@ cGreen = cBlack { green = 255 }
 
 cBlue :: Color
 cBlue = cBlack { blue = 255 }
+
+dimColor :: Color -> Color
+dimColor (Color r g b p) =
+  Color (limit r) (limit g) (limit b) (limit p)
+ where 
+   limit x = 
+     let y = fromIntegral x :: Double
+      in round (min 255 (y * y / 256))
 
 
 averageColor ::

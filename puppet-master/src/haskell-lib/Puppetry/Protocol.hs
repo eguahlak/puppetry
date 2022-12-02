@@ -278,9 +278,9 @@ instance Binary PuppetCommand where
       NOp ->
         putWord8 0x00
       Set t c ->
-        putWord8 0x53 &: t &: c
+        putWord8 0x53 &: t &: (dimColor c)
       Gradient ms t c ->
-        putWord8 0x47 &: ms &: t &: c
+        putWord8 0x47 &: ms &: t &: (dimColor c)
       Test ->
         putWord8 0x54
 
