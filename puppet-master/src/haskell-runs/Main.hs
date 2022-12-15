@@ -44,13 +44,21 @@ main = do
 
 run :: (State -> IO ()) -> IO ()
 run send = do
+  send darkness
+  wait
+  send day
+  wait
   send sunset
   wait
   sendOver 20.0 (fadeout 40 sunset)
   wait
-  send lights
+  send nighttime
   wait
   sendOver 20.0 (introes 40 sunrise)
+  wait
+  send day
+  wait
+  send darkness
  where
   sendOver _ [] = error "not expected"
   sendOver (sec :: Float) (a : as) = do
@@ -119,6 +127,12 @@ monochrome c =
 lights :: State
 lights = monochrome cWhite
 
+day :: State
+day = monochrome cWhite
+
+nighttime :: State
+nighttime = monochrome cBlue
+
 sunrise :: State
 sunrise =
   emptyState
@@ -126,7 +140,7 @@ sunrise =
     , right = fromList [(0, sunColor)]
     }
  where
-  sunColor = cRed
+  sunColor = cRed{blue = 104}
 
 sunset :: State
 sunset =
