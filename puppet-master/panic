@@ -1,0 +1,2 @@
+#/usr/bin/env bash
+cabal run puppet-master:exe:script $@
