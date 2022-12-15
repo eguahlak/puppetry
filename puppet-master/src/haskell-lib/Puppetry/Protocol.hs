@@ -1,88 +1,89 @@
-{-# LANGUAGE DeriveFunctor       #-}
-{-# LANGUAGE DeriveGeneric       #-}
-{-# LANGUAGE FlexibleInstances   #-}
-{-# LANGUAGE LambdaCase          #-}
-{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-module Puppetry.Protocol
-  ( Color(..)
-  , ArraySelect(..)
-  , Target(..)
-  , PuppetCommand(..)
-  , PuppetResponse(..)
-  , PuppetM
-  , runPuppetry
-  , unsafeRunPuppetry
-  , defaultPuppetrySettings
-  , printProgram
-  , printAll
-  , execute
 
-  , withSerial
-
-  , sendP
+module Puppetry.Protocol (
+  Color (..),
+  ArraySelect (..),
+  Target (..),
+  PuppetCommand (..),
+  PuppetResponse (..),
+  PuppetM,
+  runPuppetry,
+  unsafeRunPuppetry,
+  defaultPuppetrySettings,
+  printProgram,
+  printAll,
+  execute,
+  withSerial,
+  sendP,
   -- , sendCmd
-  , nop
-  , set
-  , gradient
-  , test
+  nop,
+  set,
+  gradient,
+  test,
+  leftSide,
+  rightSide,
+  everything,
+  nothing,
+  noArrays,
+  allArrays,
+) where
 
-  , leftSide
-  , rightSide
+import Debug.Trace
 
-  , everything
-  , nothing
-  , noArrays
-  , allArrays
-  ) where
-
-import           Debug.Trace
 -- import           System.Posix.Unistd
 
-import           Data.Binary
-import           Data.Binary.Get
-import           Data.Binary.Put  hiding (flush)
-import           Data.Bits
-import qualified Data.ByteString            as BS
-import qualified Data.ByteString.Lazy       as BL
+import Data.Binary
+import Data.Binary.Get
+import Data.Binary.Put hiding (flush)
+import Data.Bits
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BL
 
-import           Data.Aeson                hiding (Error, encode)
+import Data.Aeson hiding (Error, encode)
 
-import qualified Data.Text                  as T
-import qualified Data.Vector                as V
+import qualified Data.Text as T
+import qualified Data.Vector as V
+
 -- import           Numeric
 
-import           GHC.Generics               (Generic)
-import           GHC.Word                   ()
+import GHC.Generics (Generic)
+import GHC.Word ()
 
-import           Control.Monad
-import           Control.Monad.Free
+import Control.Monad
+import Control.Monad.Free
+
 -- import           Control.Monad.Plus
-import           Control.Monad.IO.Class
-import           Control.Concurrent
 
-import           System.Hardware.Serialport
+import Control.Concurrent
+import Control.Monad.IO.Class
 
-import           Puppetry.Color
+import System.Hardware.Serialport
 
+import Puppetry.Color
 
 data ArraySelect = ArraySelect
-  { backlight  :: !Bool
-  , midlight   :: !Bool
+  { backlight :: !Bool
+  , midlight :: !Bool
   , frontlight :: !Bool
   , scenelight :: !Bool
-  , sidelight  :: !Bool
-  } deriving (Show, Read, Generic)
+  , sidelight :: !Bool
+  }
+  deriving (Show, Read, Generic)
 
 instance Semigroup ArraySelect where
   (<>) m1 m2 =
     ArraySelect
-     { backlight = backlight m1 || backlight m2
-     , midlight = midlight m1 || midlight m2
-     , frontlight = frontlight m1 || frontlight m2
-     , scenelight = scenelight m1 || scenelight m2
-     , sidelight = sidelight m1 || sidelight m2
-     }
+      { backlight = backlight m1 || backlight m2
+      , midlight = midlight m1 || midlight m2
+      , frontlight = frontlight m1 || frontlight m2
+      , scenelight = scenelight m1 || scenelight m2
+      , sidelight = sidelight m1 || sidelight m2
+      }
 
 instance Monoid ArraySelect where
   mempty = noArrays
@@ -91,100 +92,105 @@ instance FromJSON ArraySelect where
   parseJSON (String "all") =
     return allArrays
   parseJSON (String "mid") =
-    return $ noArrays { midlight = True }
+    return $ noArrays{midlight = True}
   parseJSON (String "back") =
-    return $ noArrays { backlight = True }
+    return $ noArrays{backlight = True}
   parseJSON (String "front") =
-    return $ noArrays { frontlight = True }
+    return $ noArrays{frontlight = True}
   parseJSON (String "side") =
-    return $ noArrays { sidelight = True }
+    return $ noArrays{sidelight = True}
   parseJSON (String "scene") =
-    return $ noArrays { scenelight = True }
+    return $ noArrays{scenelight = True}
   parseJSON (Array a) = do
-    items <- sequence . map parseJSON $ V.toList a
+    items <- mapM parseJSON $ V.toList a
     return . mconcat $ items
   parseJSON _ = mzero
 
 noArrays :: ArraySelect
-noArrays = ArraySelect
-  { backlight = False
-  , midlight = False
-  , frontlight = False
-  , scenelight = False
-  , sidelight = False
-  }
+noArrays =
+  ArraySelect
+    { backlight = False
+    , midlight = False
+    , frontlight = False
+    , scenelight = False
+    , sidelight = False
+    }
 
 allArrays :: ArraySelect
-allArrays = ArraySelect
-  { backlight = True
-  , midlight = True
-  , frontlight = True
-  , scenelight = True
-  , sidelight = True
-  }
+allArrays =
+  ArraySelect
+    { backlight = True
+    , midlight = True
+    , frontlight = True
+    , scenelight = True
+    , sidelight = True
+    }
 
 getArraySelect :: Bits a => a -> ArraySelect
 getArraySelect w =
   ArraySelect
-  { backlight = testBit w 0
-  , midlight = testBit w 1
-  , frontlight = testBit w 2
-  , scenelight = testBit w 3
-  , sidelight = testBit w 4
-  }
+    { backlight = testBit w 0
+    , midlight = testBit w 1
+    , frontlight = testBit w 2
+    , scenelight = testBit w 3
+    , sidelight = testBit w 4
+    }
 
 putArraySelect :: Bits a => ArraySelect -> a -> a
 putArraySelect t =
   putBitList $ [backlight, midlight, frontlight, scenelight, sidelight] <*> [t]
 
 putBitList :: Bits a => [Bool] -> a -> a
-putBitList ls a' = go ls 0 a'
-  where
-    -- lenghtA = a'
-    go (x:xs) i =
-      setLast . go xs (i + 1)
-      where
-        setLast a | x = setBit a i
-        setLast a = a
-    go [] _ = id
+putBitList ls = go ls 0
+ where
+  -- lenghtA = a'
+  go (x : xs) i =
+    setLast . go xs (i + 1)
+   where
+    setLast a | x = setBit a i
+    setLast a = a
+  go [] _ = id
 
 getBitList :: Bits a => a -> Int -> [Bool]
 getBitList a i = go 0
-  where
-    go j | j < i = testBit a j : go (j + 1)
-    go _ = []
+ where
+  go j | j < i = testBit a j : go (j + 1)
+  go _ = []
 
 leftSide :: [Bool]
-leftSide = map (\x -> mod x 2 == (0 :: Int) ) [0..26]
+leftSide = map (\x -> mod x 2 == (0 :: Int)) [0 .. 26]
 
 rightSide :: [Bool]
-rightSide = map (\x -> mod x 2 == (1 :: Int)) [0..26]
+rightSide = map (\x -> mod x 2 == (1 :: Int)) [0 .. 26]
 
 data Target = Target
   { arrays :: !ArraySelect
   , pixels :: ![Bool]
-  } deriving (Show, Read, Generic)
-
+  }
+  deriving (Show, Read, Generic)
 
 everything :: Target
-everything = Target
-  { arrays = allArrays
-  , pixels = replicate 27 True
-  }
+everything =
+  Target
+    { arrays = allArrays
+    , pixels = replicate 27 True
+    }
 
 nothing :: Target
-nothing = Target
-  { arrays = noArrays
-  , pixels = replicate 27 False
-  }
+nothing =
+  Target
+    { arrays = noArrays
+    , pixels = replicate 27 False
+    }
 
 instance Binary Target where
   get = do
     w <- getWord32be
-    return $ Target
-      { arrays = getArraySelect w
-      , pixels = getBitList (shift w (-5)) 27
-      }
+    return $
+      Target
+        { arrays = getArraySelect w
+        , pixels = getBitList (shift w (-5)) 27
+        }
   put (Target as px) = do
     putWord32be . putArraySelect as $ shift (putBitList px zeroBits) 5
 
@@ -193,26 +199,22 @@ instance FromJSON Target where
     a <- o .: "arrays"
     msum
       [ do
-        px :: T.Text <- o .: "pixels"
-        case px of
-          "left" -> return $ Target a leftSide
-          "right" -> return $ Target a rightSide
-          "all" -> return . Target a $ replicate 27 True
-          _ -> mzero
+          px :: T.Text <- o .: "pixels"
+          case px of
+            "left" -> return $ Target a leftSide
+            "right" -> return $ Target a rightSide
+            "all" -> return . Target a $ replicate 27 True
+            _ -> mzero
       , do
-        px <- o .: "pixels"
-        return $ Target a px
+          px <- o .: "pixels"
+          return $ Target a px
       ]
-
   parseJSON (String "all") =
-    return $ everything
-
+    return everything
   parseJSON (String "left") =
-    return $ everything { pixels = leftSide }
-
+    return $ everything{pixels = leftSide}
   parseJSON (String "right") =
-    return $ everything { pixels = rightSide }
-
+    return $ everything{pixels = rightSide}
   parseJSON _ = mzero
 
 data PuppetResponse
@@ -247,7 +249,7 @@ instance FromJSON PuppetCommand where
   parseJSON (Object o) = do
     cmd <- o .: "cmd"
     case (cmd :: T.Text) of
-      "nop"   -> return NOp
+      "nop" -> return NOp
       "gradient" -> do
         time <- o .: "time"
         target <- o .: "target"
@@ -272,15 +274,15 @@ instance Binary PuppetCommand where
       0x53 -> Set <$> get <*> get
       0x47 -> Gradient <$> get <*> get <*> get
       0x54 -> return Test
-      _    -> error "Undefined Command"
+      _ -> error "Undefined Command"
   put cmd =
     case cmd of
       NOp ->
         putWord8 0x00
       Set t c ->
-        putWord8 0x53 &: t &: (dimColor c)
+        putWord8 0x53 &: t &: dimColor c
       Gradient ms t c ->
-        putWord8 0x47 &: ms &: t &: (dimColor c)
+        putWord8 0x47 &: ms &: t &: dimColor c
       Test ->
         putWord8 0x54
 
@@ -294,14 +296,14 @@ instance Binary PuppetCommand where
 -}
 defaultPuppetrySettings :: SerialPortSettings
 defaultPuppetrySettings =
-  defaultSerialSettings { timeout = 100 }
+  defaultSerialSettings{timeout = 100}
 
 {- A PuppetProgram is sending a PuppetCommand, and depending on the
 response will know what command to send next. -}
 data PuppetProgram next
   = SendP PuppetCommand (PuppetResponse -> next)
-  -- | SendCmd BS.ByteString next
-  | DoIO (IO next)
+  | -- | SendCmd BS.ByteString next
+    DoIO (IO next)
   deriving (Functor)
 
 {- Implements the puppet program using a free monad. A free monad is
@@ -329,14 +331,14 @@ instance FromJSON PuppetInstruction where
 
 execute :: [PuppetInstruction] -> PuppetM ()
 execute [] = return ()
-execute (a:rest) = do
+execute (a : rest) = do
   case a of
     PSend p -> sendP p
     PWait ms ->
-      liftIO $ do { putStrLn $ "Started Waiting"
-                  ; threadDelay (ms * 1000)
-                  ; putStrLn $ "Waiting " ++ show ms
-                  }
+      liftIO $ do
+        putStrLn "Started Waiting"
+        threadDelay (ms * 1000)
+        putStrLn $ "Waiting " ++ show ms
   execute rest
 
 unsafeRunPuppetry :: SerialPort -> PuppetM a -> IO a
@@ -345,7 +347,6 @@ unsafeRunPuppetry sp puppet =
     Free (DoIO m) -> do
       next <- m
       unsafeRunPuppetry sp next
-
     Free (SendP cmd next) -> do
       _ <- send sp . traceShowId . BL.toStrict $ encode cmd
       rpl <- recvResponse sp
@@ -358,32 +359,29 @@ unsafeRunPuppetry sp puppet =
             _ ->
               error str
         _ -> unsafeRunPuppetry sp $ next rpl
-
     Pure a ->
       return a
-
-  where
-    recvResponse :: SerialPort -> IO PuppetResponse
-    recvResponse port = do
-      bs <- recv port 1
-      print bs
-      if 0 == BS.length bs
-        then recvResponse port
-        else
-          case decodeOrFail $ BL.fromStrict bs of
-            Left a ->
-              error $ "Something technical happend: " ++ show a
-            Right (_, _, e) ->
-              return e
+ where
+  recvResponse :: SerialPort -> IO PuppetResponse
+  recvResponse port = do
+    bs <- recv port 1
+    print bs
+    if 0 == BS.length bs
+      then recvResponse port
+      else case decodeOrFail $ BL.fromStrict bs of
+        Left a ->
+          error $ "Something technical happend: " ++ show a
+        Right (_, _, e) ->
+          return e
 
 printAll :: SerialPort -> IO ()
 printAll sp = do
   bs <- recv sp 1
-  if BS.length bs > 0 && bs /= "!" then do
-    BS.putStr bs
-    printAll sp
-  else
-    BS.putStr bs
+  if BS.length bs > 0 && bs /= "!"
+    then do
+      BS.putStr bs
+      printAll sp
+    else BS.putStr bs
 
 {- The interpreter, sends all commands to  -}
 runPuppetry :: FilePath -> SerialPortSettings -> PuppetM a -> IO a

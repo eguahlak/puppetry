@@ -1,65 +1,66 @@
-{-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings     #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TemplateHaskell       #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
-{-# LANGUAGE LambdaCase  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
-import Paths_puppet_master as Paths
-
 -- directory
-import           System.Directory
+import System.Directory
 
 -- filepath
-import           System.FilePath
+import System.FilePath
 
 -- base
-import           GHC.Generics                   (Generic)
+import GHC.Generics (Generic)
 
 -- containers
-import qualified Data.Map                       as Map
+import Data.Map qualified as Map
 
-import qualified Data.ByteString.Lazy           as BL
+import Data.ByteString.Lazy qualified as BL
 
-import qualified Control.Concurrent             as Concurrent
-import qualified Control.Exception              as Exception
-import           Control.Lens                   hiding ((<.>))
-import qualified Control.Monad                  as Monad
-import           Control.Monad.Reader
-import           Control.Monad.State            (StateT, runStateT)
-import           Data.Aeson hiding ((.=))
-import qualified Data.List                      as List
-import           Data.Semigroup                 hiding ((<>))
-import qualified Network.Wai                    as Wai
-import qualified Network.Wai.Application.Static as WSS
-import qualified Network.Wai.Handler.Warp       as Warp
-import qualified Network.Wai.Handler.WebSockets as WS
-import qualified Network.WebSockets             as WS
-import           System.Environment
-import           System.Hardware.Serialport     (SerialPort,
-                                                 SerialPortSettings (..),
-                                                 defaultSerialSettings,
-                                                 withSerial)
-import           System.IO
+import Control.Concurrent qualified as Concurrent
+import Control.Exception qualified as Exception
+import Control.Lens hiding ((<.>))
+import Control.Monad qualified as Monad
+import Control.Monad.Reader
+import Control.Monad.State (StateT, runStateT)
+import Data.Aeson hiding ((.=))
+import Data.List qualified as List
+import Data.Semigroup hiding ((<>))
+import Network.Wai qualified as Wai
+import Network.Wai.Application.Static qualified as WSS
+import Network.Wai.Handler.Warp qualified as Warp
+import Network.Wai.Handler.WebSockets qualified as WS
+import Network.WebSockets qualified as WS
+import System.Environment
+import System.Hardware.Serialport (
+  SerialPort,
+  SerialPortSettings (..),
+  defaultSerialSettings,
+  withSerial,
+ )
+import System.IO
 
-import           Puppetry.State
-import           Puppetry.Transfer
-import           Puppetry.Color
+import Puppetry.Color
+import Puppetry.State
+import Puppetry.Transfer
 
 type ClientId = Int
-type Client   = (ClientId, WS.Connection)
+type Client = (ClientId, WS.Connection)
 
 data ClientState = ClientState
-  { _lights      :: !State
+  { _lights :: !State
   , _savedStates :: !(Map.Map Int Color)
-  } deriving (Generic)
+  }
+  deriving (Generic)
 
 dropOne :: Options
-dropOne = defaultOptions { fieldLabelModifier = drop 1 }
+dropOne = defaultOptions{fieldLabelModifier = drop 1}
 
 instance FromJSON ClientState where
   parseJSON = genericParseJSON dropOne
@@ -70,9 +71,9 @@ instance ToJSON ClientState where
 
 type StateRef = Concurrent.MVar ServerState
 data ServerState = ServerState
-  { _clientList  :: ![Client]
-  , _saveFolder  :: !FilePath
-  , _serialport  :: Maybe (FilePath, SerialPort)
+  { _clientList :: ![Client]
+  , _saveFolder :: !FilePath
+  , _serialport :: Maybe (FilePath, SerialPort)
   , _clientState :: !ClientState
   }
 
@@ -82,14 +83,15 @@ makeLenses 'ClientState
 type PuppetServer = ReaderT StateRef IO
 type Puppetry = StateT ServerState IO
 
--- | Execute an atomic access to the ServerState. Be aware, this is a
--- locking action.
-atomic
-  :: Puppetry a
-  -> PuppetServer a
+{- | Execute an atomic access to the ServerState. Be aware, this is a
+ locking action.
+-}
+atomic ::
+  Puppetry a ->
+  PuppetServer a
 atomic m = do
   ref <- ask
-  liftIO . Concurrent.modifyMVar ref $ \ s -> do
+  liftIO . Concurrent.modifyMVar ref $ \s -> do
     (s', a) <- runStateT m s
     return (a, s')
 
@@ -103,7 +105,6 @@ initializeSavedStates folder = do
     return (i, either (const cBlack) average $ state)
   return $ Map.fromList states
 
-
 sInit :: FilePath -> Maybe (FilePath, SerialPort) -> ClientState -> ServerState
 sInit fp sp cst =
   ServerState
@@ -114,10 +115,11 @@ sInit fp sp cst =
 
 serialSettings :: SerialPortSettings
 serialSettings =
-  defaultSerialSettings { timeout = 10 };
+  defaultSerialSettings{timeout = 10}
 
--- | main is run with
--- puppet-master <port> <usbport> <save-states-folder>
+{- | main is run with
+ puppet-master <port> <usbport> <save-states-folder>
+-}
 main :: IO ()
 main = do
   getArgs >>= \case
@@ -128,26 +130,25 @@ main = do
       let port = read strPort
       putStrLn $ "Starting puppet-master at " ++ show port
       if uport /= "-"
-        then
-          withSerial uport serialSettings $ \sp -> do
-            stateRef <- Concurrent.newMVar
+        then withSerial uport serialSettings $ \sp -> do
+          stateRef <-
+            Concurrent.newMVar
               (sInit folder (Just (uport, sp)) state)
-            run port stateRef
+          run port stateRef
         else do
           stateRef <- Concurrent.newMVar (sInit folder Nothing state)
           run port stateRef
     _ -> putStrLn "puppet-master <port> <usbport> <saved-states-folder>"
-
-  where
-    run port stateRef = do
-      -- fp <- Paths.getDataDir
-      fp <- canonicalizePath "public"
-      putStrLn $ "Serving: " <> fp
-      Warp.run port $ WS.websocketsOr
+ where
+  run port stateRef = do
+    -- fp <- Paths.getDataDir
+    fp <- canonicalizePath "public"
+    putStrLn $ "Serving: " <> fp
+    Warp.run port $
+      WS.websocketsOr
         WS.defaultConnectionOptions
         (wsApp stateRef)
         (httpApp fp)
-
 
 httpApp :: FilePath -> Wai.Application
 httpApp fp =
@@ -162,7 +163,6 @@ wsApp stateRef pendingConn = do
     (runReaderT (listen client) stateRef)
     (runReaderT (disconnectClient client) stateRef)
 
-
 data Protocol
   = Save !Int
   | Load !Int
@@ -171,8 +171,9 @@ data Protocol
 
 instance FromJSON Protocol
 
--- | Listen on a client, if we receive a state from the client
--- we update and broadcast.
+{- | Listen on a client, if we receive a state from the client
+ we update and broadcast.
+-}
 listen :: Client -> PuppetServer ()
 listen client = do
   Monad.forever $ do
@@ -190,23 +191,22 @@ listen client = do
                 Left err -> do
                   liftIO . putStrLn $
                     "Could not load " ++ show no ++ ": " ++ err
-                  clientState.savedStates.at no .= Just (average emptyState)
+                  clientState . savedStates . at no .= Just (average emptyState)
                   updateState emptyState
                 Right state -> do
-                  clientState.savedStates.at no .= Just (average state)
+                  clientState . savedStates . at no .= Just (average state)
                   updateState state
             Save no ->
-              saveState no =<< use (clientState.lights)
+              saveState no =<< use (clientState . lights)
       Left err -> do
         liftIO $ putStrLn ("Error in conversion: " ++ err)
-
-  where
-    updateState lights' = do
-      clientState.lights .= lights'
-      printState
-      state <- use clientState
-      clients <- use clientList
-      liftIO $ multisend state clients
+ where
+  updateState lights' = do
+    clientState . lights .= lights'
+    printState
+    state <- use clientState
+    clients <- use clientList
+    liftIO $ multisend state clients
 
 loadState :: Int -> Puppetry (Either String State)
 loadState i = do
@@ -218,7 +218,7 @@ loadState i = do
 saveState :: Int -> State -> Puppetry ()
 saveState i state = do
   file <- getSaveFile i
-  clientState.savedStates.at i .= Just (average state)
+  clientState . savedStates . at i .= Just (average state)
   liftIO $ BL.writeFile file (encode state)
 
 getSaveFile :: Int -> Puppetry FilePath
@@ -228,21 +228,22 @@ getSaveFile i = do
 
 printState :: Puppetry ()
 printState = do
-    s <- use (clientState.lights)
-    p <- use serialport
-    liftIO $ do
-      transfer stdout s
-    case p of
-      Nothing -> return ()
-      Just (_, sp) ->
-        liftIO $ do
-            transferS s sp
-            readToBang sp
-          -- h <- hOpenSerial p'
-          -- transfer h s
-          -- str <- readToBang h
-          -- putStrLn $ "Response: '" ++ str ++ "'"
-          -- hClose h
+  s <- use (clientState . lights)
+  p <- use serialport
+  liftIO $ do
+    transfer stdout s
+  case p of
+    Nothing -> return ()
+    Just (_, sp) ->
+      liftIO $ do
+        transferS s sp
+        readToBang sp
+
+-- h <- hOpenSerial p'
+-- transfer h s
+-- str <- readToBang h
+-- putStrLn $ "Response: '" ++ str ++ "'"
+-- hClose h
 
 -- | Receive data from the client
 recv :: FromJSON a => Client -> IO (Either String a)
@@ -262,8 +263,9 @@ send a (_, conn) = do
   let txt = encode a
   WS.sendTextData conn txt
 
--- | Connect a client, atomically add the client to the list
--- and send out the current state.
+{- | Connect a client, atomically add the client to the list
+ and send out the current state.
+-}
 connectClient :: WS.Connection -> PuppetServer Client
 connectClient conn =
   atomic $ do
@@ -279,7 +281,7 @@ addClient :: WS.Connection -> Puppetry Client
 addClient conn = do
   Max clientId <- (Max 0 <>) <$> (use $ clientList . traverse . _1 . to Max)
   let client = (clientId + 1, conn)
-  clientList %= (client:)
+  clientList %= (client :)
   return client
 
 -- | Disconnect the client

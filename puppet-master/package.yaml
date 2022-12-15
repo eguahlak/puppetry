@@ -43,3 +43,9 @@ executables:
     source-dirs: src/haskell-app
     dependencies:
       - puppet-master
+  script:
+    main: Main.hs
+    source-dirs: src/haskell-runs
+    dependencies:
+      - puppet-master
+      - optparse-applicative

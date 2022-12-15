@@ -24,6 +24,12 @@ haskellPackages.developPackage {
   };
   modifier = drv:
     with pkgs.haskell.lib;
-    addBuildTools drv (with haskellPackages; [ cabal-install ghcid hpack ])
+    addBuildTools drv (with haskellPackages; [
+      cabal-install
+      ghcid
+      hpack
+      haskell-language-server
+      fourmolu
+    ])
   ;
 }
