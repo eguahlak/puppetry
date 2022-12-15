@@ -87,7 +87,7 @@ lampToString l =
     ]
  where
   i2hx f =
-    exact 2 '0' $ showHex (f l) ""
+    exact 2 '0' $ reverse $ showHex (f l) ""
 
 exact :: Int -> a -> [a] -> [a]
 exact i a as =
