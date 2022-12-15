@@ -14,10 +14,11 @@ import System.Environment (getArgs)
 -- import qualified Control.Concurrent as Concurrent
 
 import Control.Concurrent (threadDelay)
-import Control.Monad (void)
+import Control.Monad (when)
 import Puppetry.Color
 import Puppetry.State
 import Puppetry.Transfer (readToBang, stateToString, transferS)
+import System.Directory.Internal.Prelude (exitFailure)
 import System.Hardware.Serialport (
   SerialPortSettings (..),
   defaultSerialSettings,
@@ -43,13 +44,13 @@ main = do
 
 run :: (State -> IO ()) -> IO ()
 run send = do
-  send darkness
+  send sunset
   wait
-  sendOver 2.0 (introes 20 sunrise)
+  sendOver 20.0 (fadeout 40 sunset)
   wait
   send lights
   wait
-  sendOver 2.0 (fadeout 20 sunset)
+  sendOver 20.0 (introes 40 sunrise)
  where
   sendOver _ [] = error "not expected"
   sendOver (sec :: Float) (a : as) = do
@@ -95,7 +96,10 @@ mapColorsState fn s =
 wait :: IO ()
 wait = do
   putStrLn "Press Enter to Continue"
-  void getLine
+  x <- getLine
+  when
+    (x == "exit")
+    exitFailure
   putStrLn "Thanks!"
 
 darkness :: State
