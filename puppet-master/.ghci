@@ -1,5 +1,0 @@
-:set -fwarn-unused-binds -fwarn-unused-imports -Wall
-:set -isrc/haskell-runs
-:set -isrc/haskell-lib
-:set args /dev/ttySD0
-:load Main 
