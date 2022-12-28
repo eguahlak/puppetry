@@ -25,6 +25,19 @@ is in boot model (hold bootsel for 3 seconds on start)
 cargo run --release
 ```
 
+## WS2812B Protocol
+
+0 is 0.40 μs high + 0.85 μs low = 1.25 μs
+1 is 0.80 μs high + 0.45 μs low = 1.25 μs
+
+10 ticks = 1.25 μs = 8Mhz
+
+Clock 125 Mhz, scale is 15
+
+
+
+https://pdf1.alldatasheet.com/datasheet-pdf/view/1179113/WORLDSEMI/WS2812B.html
+
 ## Log 
 
 - Followed the advice from [rp2040-project-template-nix](https://github.com/polygon/rp2040-project-template-nix/)

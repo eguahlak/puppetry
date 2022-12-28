@@ -1,7 +1,10 @@
 #![no_std]
 #![no_main]
 
-use bsp::{entry, hal::pio::ShiftDirection};
+use bsp::{
+    entry,
+    hal::{pio::ShiftDirection, Clock},
+};
 use defmt::*;
 use defmt_rtt as _;
 // use embedded_hal::digital::v2::OutputPin;
@@ -28,13 +31,13 @@ use bsp::hal::{
 fn main() -> ! {
     info!("Program start");
     let mut pac = pac::Peripherals::take().unwrap();
-    // let core = pac::CorePeripherals::take().unwrap();
+    let core = pac::CorePeripherals::take().unwrap();
     let mut watchdog = Watchdog::new(pac.WATCHDOG);
     let sio = Sio::new(pac.SIO);
 
     // External high-speed crystal on the pico board is 12Mhz
     let external_xtal_freq_hz = 12_000_000u32;
-    let _clocks = init_clocks_and_plls(
+    let clocks = init_clocks_and_plls(
         external_xtal_freq_hz,
         pac.XOSC,
         pac.CLOCKS,
@@ -46,7 +49,10 @@ fn main() -> ! {
     .ok()
     .unwrap();
 
-    // let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
+    let mut delay = cortex_m::delay::Delay::new(
+        core.SYST,
+        clocks.system_clock.freq().to_Hz(),
+    );
 
     let pins = bsp::Pins::new(
         pac.IO_BANK0,
@@ -58,7 +64,7 @@ fn main() -> ! {
     // setup
 
     // configure LED pin for Pio0.
-    let _led: Pin<_, FunctionPio0> = pins.gpio3.into_mode();
+    let _led: Pin<_, FunctionPio0> = pins.gpio16.into_mode();
     // PIN id for use inside of PIO
     let led_pin_id = 16;
 
@@ -82,17 +88,31 @@ fn main() -> ! {
         .autopull(true)
         .pull_threshold(24)
         .out_shift_direction(ShiftDirection::Left)
-        .set_pins(led_pin_id, 1)
+        .side_set_pin_base(led_pin_id)
+        .set_pins(led_pin_id, 0)
         .buffers(bsp::hal::pio::Buffers::OnlyTx)
-        .clock_divisor_fixed_point(65535 / 1, 0)
+        // .clock_divisor_fixed_point(0, 0)
+        .clock_divisor_fixed_point(15, 160)
         .build(sm0);
     sm.set_pindirs([(led_pin_id, PinDir::Output)]);
-    tx.write(0x00ff9933);
+    info!(
+        "Starting the machine: {}",
+        clocks.system_clock.freq().to_Hz()
+    );
+    info!("Starting the machine");
     sm.start();
+    info!("Machine started");
 
     // PIO runs in background, independently from CPU
     loop {
-        cortex_m::asm::wfi();
+        info!("Loop");
+        tx.write(0x00110000);
+        tx.write(0x00110000);
+        tx.write(0x00110000);
+        tx.write(0x00110000);
+        tx.write(0x00110000);
+        tx.write(0x00110000);
+        delay.delay_ms(500)
     }
 }
 
