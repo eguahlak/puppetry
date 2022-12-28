@@ -106,7 +106,7 @@ fn main() -> ! {
     let mut red: u32 = 0;
     let mut blue: u32 = 0;
     let mut green: u32 = 0;
-    let max_power: u32 = 32;
+    let max_power: u32 = 16;
     // PIO runs in background, independently from CPU
     loop {
         red = (red + 4) % max_power;

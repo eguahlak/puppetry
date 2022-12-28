@@ -14,7 +14,6 @@
         };
       in
       rec {
-        packages.elf2uf2-rs = pkgs.callPackage ./nix/elf2uf2.nix { };
         devShell = pkgs.mkShell {
           buildInputs = [
             (pkgs.rust-bin.selectLatestNightlyWith
@@ -26,7 +25,6 @@
             pkgs.cargo-embed
             pkgs.flip-link
             pkgs.probe-run
-            # packages.elf2uf2-rs
             pkgs.rustfmt
           ];
         };
