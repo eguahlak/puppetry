@@ -103,16 +103,21 @@ fn main() -> ! {
     sm.start();
     info!("Machine started");
 
+    let mut red: u32 = 0;
+    let mut blue: u32 = 0;
+    let mut green: u32 = 0;
+    let max_power: u32 = 32;
     // PIO runs in background, independently from CPU
     loop {
-        info!("Loop");
-        tx.write(0x00110000);
-        tx.write(0x00110000);
-        tx.write(0x00110000);
-        tx.write(0x00110000);
-        tx.write(0x00110000);
-        tx.write(0x00110000);
-        delay.delay_ms(500)
+        red = (red + 4) % max_power;
+        blue = (blue + 2) % max_power;
+        green = (green + 1) % max_power;
+        for i in 0..6 {
+            tx.write(
+                green << 24 | (red + 10 * i % max_power) << 16 | blue << 8,
+            );
+        }
+        delay.delay_ms(55);
     }
 }
 
