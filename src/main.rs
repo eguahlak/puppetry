@@ -1,31 +1,25 @@
 #![no_std]
 #![no_main]
 
-use bsp::{
-    entry,
-    hal::{pio::ShiftDirection, Clock},
-};
+use rp_pico as bsp;
+use bsp::entry;
 use defmt::*;
 use defmt_rtt as _;
-// use embedded_hal::digital::v2::OutputPin;
-// use embedded_time::fixed_point::FixedPoint;
 use panic_probe as _;
-
-// Provide an alias for our BSP so we can switch targets quickly.
-// Uncomment the BSP you included in Cargo.toml, the rest of the code does not need to change.
-use rp_pico as bsp;
-// use sparkfun_pro_micro_rp2040 as bsp;
 
 use bsp::hal::{
     clocks::init_clocks_and_plls,
     gpio::{FunctionPio0, Pin},
     pac,
-    pio::PIOBuilder,
-    pio::PIOExt,
-    pio::PinDir,
+    Clock,
+    pio::{ShiftDirection,
+        PIOBuilder,
+        PIOExt,
+        PinDir},
     sio::Sio,
     watchdog::Watchdog,
 };
+
 
 #[entry]
 fn main() -> ! {
@@ -45,15 +39,15 @@ fn main() -> ! {
         pac.PLL_USB,
         &mut pac.RESETS,
         &mut watchdog,
-    )
-    .ok()
-    .unwrap();
+        )
+        //.ok()
+        .unwrap();
 
     let mut delay = cortex_m::delay::Delay::new(
         core.SYST,
         clocks.system_clock.freq().to_Hz(),
     );
-
+     
     let pins = bsp::Pins::new(
         pac.IO_BANK0,
         pac.PADS_BANK0,
@@ -114,7 +108,7 @@ fn main() -> ! {
         green = (green + 1) % max_power;
         for i in 0..6 {
             tx.write(
-                green << 24 | (red + 10 * i % max_power) << 16 | blue << 8,
+                green << 24 | red  << 16 | blue << 8,
             );
         }
         delay.delay_ms(55);
